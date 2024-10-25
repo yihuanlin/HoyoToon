@@ -1,15 +1,15 @@
 <br>
 <p align="center">
-    <a href="https://github.com/Melioli/HoyoToon"><img src="https://github.com/user-attachments/assets/249a06ae-784e-49cf-aaec-2d9367f07cc1" alt="HoyoToon"/></a>
+    <a href="https://github.com/HoyoToon/HoyoToon"><img src="https://github.com/user-attachments/assets/249a06ae-784e-49cf-aaec-2d9367f07cc1" alt="HoyoToon"/></a>
 </p><br>
 
 <p align="center">
-    <a href="https://github.com/Melioli/HoyoToon/blob/main/LICENSE"><img alt="GitHub license" src="https://img.shields.io/badge/License-GPL--3.0-702963?style=for-the-badge"></a><br>
-    <img alt="GitHub Repo stars" src="https://img.shields.io/github/stars/Melioli/HoyoToon?style=for-the-badge"
+    <a href="https://github.com/HoyoToon/HoyoToon/blob/main/LICENSE"><img alt="GitHub license" src="https://img.shields.io/badge/License-GPL--3.0-702963?style=for-the-badge"></a><br>
+    <img alt="GitHub Repo stars" src="https://img.shields.io/github/stars/HoyoToon/HoyoToon?style=for-the-badge"
 "></a>
     <img alt="Discord" src="https://img.shields.io/discord/1129811149416824934?style=for-the-badge"
 "></a>
-    <img alt="GitHub issues" src="https://img.shields.io/github/issues/Melioli/HoyoToon?style=for-the-badge"
+    <img alt="GitHub issues" src="https://img.shields.io/github/issues/HoyoToon/HoyoToon?style=for-the-badge"
 "></a>
 </p>
 
@@ -70,11 +70,11 @@ You can install HoyoToon through 3 methods.
 
 ## Issues
 
-- If you encounter any issues while using HoyoToon, please don't hesitate to reach out to us. You can contact us directly on Discord, or you can [create an issue](https://github.com/Melioli/HoyoToon/issues/new/choose) on our GitHub repository. We are always happy to help and will do our best to resolve any problems you may have.
+- If you encounter any issues while using HoyoToon, please don't hesitate to reach out to us. You can contact us directly on Discord, or you can [create an issue](https://github.com/HoyoToon/HoyoToon/issues/new/choose) on our GitHub repository. We are always happy to help and will do our best to resolve any problems you may have.
 
 ## Rules
 
-- The [GPL-3.0 License](https://github.com/Melioli/HoyoToon/blob/main/LICENSE) applies.
+- The [GPL-3.0 License](https://github.com/HoyoToon/HoyoToon/blob/main/LICENSE) applies.
 - If you decide to use this shader in its original form for VRChat avatars, renders, animations, or any other medium that does not involve modifying the shader, please give credit to us.
 - If you use this shader as a basis for creating your own shader, please be sure to give credit to us. This does also include shaders in other forms, nodes, Blender, or ports to different pipelines, or engines.
 - If you're affiliated with Festivity, Omatsuri or Primotoon in any shape or form, then you will not be allowed to utilize any of our code or assets for anything.
@@ -88,7 +88,7 @@ We welcome contributions to the HoyoToon project! If you notice any issues or ha
 
 All of this wouldn't be possible if it weren't for:
 
-- [Meliodas](https://github.com/Melioli)
+- [Meliodas](https://github.com/HoyoToon)
 - [Manashiku](https://github.com/Manashiku)
 - [Chips](https://github.com/Elysia-simp)
 - [Razmoth](https://github.com/Razmoth)
