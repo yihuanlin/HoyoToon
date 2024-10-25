@@ -40,7 +40,7 @@ You can install HoyoToon through 3 methods.
 
 ### VRChat Creator Companion
 
-- Open the VPM package listing [website](https://melioli.github.io/vpm/)
+- Open the VPM package listing [website](https://hoyotoon.github.io/vpm/)
 - Press Add to VCC
 - Open your creator companion, and go to your project you'll wish to install HoyoToon in.
 - Press on Manage Project.
