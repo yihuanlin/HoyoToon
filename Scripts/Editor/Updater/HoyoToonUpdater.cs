@@ -26,8 +26,8 @@ namespace HoyoToon
     [InitializeOnLoad]
     public class HoyoToonUpdater : Editor
     {
-        private const string RemotePackageJsonUrl = "https://raw.githubusercontent.com/Melioli/HoyoToon/main/package.json";
-        private const string ReleasesApiUrl = "https://api.github.com/repos/Melioli/HoyoToon/releases";
+        private const string RemotePackageJsonUrl = "https://raw.githubusercontent.com/HoyoToon/HoyoToon/main/package.json";
+        private const string ReleasesApiUrl = "https://api.github.com/repos/HoyoToon/HoyoToon/releases";
         private static List<string> assetsToDelete = new List<string>();
         private static List<string> metasToDelete = new List<string>();
 

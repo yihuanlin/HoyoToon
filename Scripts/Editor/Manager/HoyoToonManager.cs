@@ -84,7 +84,7 @@ namespace HoyoToon
         [MenuItem("HoyoToon/Resources/Asset Repo", priority = 11)]
         private static void OpenAssetRepo()
         {
-            Application.OpenURL("https://github.com/Melioli/HoyoToon-Assets");
+            Application.OpenURL("https://github.com/HoyoToon/HoyoToon-Assets");
         }
 
         #endregion
