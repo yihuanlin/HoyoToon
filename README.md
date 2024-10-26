@@ -4,7 +4,6 @@
 </p><br>
 
 <p align="center">
-    <a href="https://github.com/HoyoToon/HoyoToon/blob/main/LICENSE"><img alt="GitHub license" src="https://img.shields.io/badge/License-GPL--3.0-702963?style=for-the-badge"></a><br>
     <img alt="GitHub Repo stars" src="https://img.shields.io/github/stars/HoyoToon/HoyoToon?style=for-the-badge"
 "></a>
     <img alt="Discord" src="https://img.shields.io/discord/1129811149416824934?style=for-the-badge"
