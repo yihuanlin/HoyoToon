@@ -238,7 +238,7 @@ namespace HoyoToon
             }
             else
             {
-                EditorGUILayout.HelpBox("VRChat Asset Installer is an external asset that allows you to easily find and install assets for VRChat into your project. It has various community prefabs and tools availabe for one click installation. It is not an alternative to VCC, but an addition as it uses unitypackages and UPM instead of VPM.", MessageType.Info);
+                EditorGUILayout.HelpBox("VRChat Asset Installer is an external asset that allows you to easily find and install assets for VRChat into your project. It has various community prefabs and tools available for one click installation. It is not an alternative to VCC, but an addition as it uses unitypackages and UPM instead of VPM.", MessageType.Info);
                 EditorGUI.BeginDisabledGroup(_isInstallingVAI);
                 if (GUILayout.Button("Install VRChat Asset Installer"))
                 {
