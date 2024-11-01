@@ -3,15 +3,6 @@
     <a href="https://github.com/HoyoToon/HoyoToon"><img src="https://github.com/user-attachments/assets/249a06ae-784e-49cf-aaec-2d9367f07cc1" alt="HoyoToon"/></a>
 </p><br>
 
-<p align="center">
-    <img alt="GitHub Repo stars" src="https://img.shields.io/github/stars/HoyoToon/HoyoToon?style=for-the-badge"
-"></a>
-    <img alt="Discord" src="https://img.shields.io/discord/1129811149416824934?style=for-the-badge"
-"></a>
-    <img alt="GitHub issues" src="https://img.shields.io/github/issues/HoyoToon/HoyoToon?style=for-the-badge"
-"></a>
-</p>
-
 ---
 
 ## Features
