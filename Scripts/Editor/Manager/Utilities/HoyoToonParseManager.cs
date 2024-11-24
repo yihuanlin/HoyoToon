@@ -29,8 +29,9 @@ namespace HoyoToon
             HSRBoy,
             HSRMiss,
             HI3P1,
-            Hi3P2,
-            WuWa
+            HI3P2,
+            WuWa,
+            ZZZ
         }
         public static BodyType currentBodyType;
 
@@ -169,7 +170,7 @@ namespace HoyoToon
         public static void DetermineBodyTypeFromJson(string jsonPath)
         {
             HoyoToonLogs.LogDebug($"Searching for JSON files in: {jsonPath}");
-            string[] jsonFiles = Directory.GetFiles(jsonPath, "*Face.json");
+            string[] jsonFiles = Directory.GetFiles(jsonPath, "*.json").Where(f => f.Contains("Face")).ToArray();
             HoyoToonLogs.LogDebug($"Found {jsonFiles.Length} JSON files");
 
             bool bodyTypeSet = false;
@@ -185,21 +186,31 @@ namespace HoyoToon
                     HoyoToonLogs.LogDebug($"Found _FaceExpression: {expressionMapName}");
                     SetHSRBodyType(expressionMapName, ref bodyTypeSet);
                 }
+                else if (jsonObject["m_SavedProperties"]?["m_Floats"]?["_SPCubeMapIntensity"] != null)
+                {
+                    HoyoToonLogs.LogDebug("Found _SPCubeMapIntensity");
+                    if (jsonObject["m_SavedProperties"]?["m_Floats"]?["_MetalMapGrp"] != null || 
+                        jsonObject["m_SavedProperties"]?["m_Floats"]?["_MicsGrp"] != null)
+                    {
+                        HoyoToonLogs.LogDebug("Found _MetalMapGrp or _MicsGrp");
+                        currentBodyType = BodyType.HI3P2;
+                    }
+                    else
+                    {
+                        HoyoToonLogs.LogDebug("No _MetalMapGrp or _MicsGrp found");
+                        currentBodyType = BodyType.HI3P1;
+                    }
+                    bodyTypeSet = true;
+                }
                 else if (TryGetTextureNameFromJson(jsonObject, "_FaceMapTex", out string faceMapName))
                 {
                     HoyoToonLogs.LogDebug($"Found _FaceMapTex: {faceMapName}");
                     SetGIBodyType(faceMapName, ref bodyTypeSet);
                 }
-                else if (jsonObject["m_SavedProperties"]?["m_Floats"]?["_SPCubeMapIntensity"] != null)
+                else if (jsonObject["m_SavedProperties"]?["m_Floats"]?["_PointSpace"] != null)
                 {
-                    HoyoToonLogs.LogDebug("Found _SPCubeMapIntensity");
-                    currentBodyType = BodyType.HI3P1;
-                    bodyTypeSet = true;
-                }
-                else if (TryGetTextureNameFromJson(jsonObject, "_MetalMapGrp", out _) || TryGetTextureNameFromJson(jsonObject, "_MicsGrp", out _))
-                {
-                    HoyoToonLogs.LogDebug("Found _MetalMapGrp or _MicsGrp");
-                    currentBodyType = BodyType.Hi3P2;
+                    HoyoToonLogs.LogDebug("Found _PointSpace");
+                    currentBodyType = BodyType.ZZZ;
                     bodyTypeSet = true;
                 }
                 else
