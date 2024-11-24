@@ -9,6 +9,7 @@ namespace HoyoToon
     public class HoyoToonTextureManager
     {
         #region Constants
+        private static readonly string[] sRGBKeywords = HoyoToonDataManager.Data.Textures.SRGBKeywords;
         private static readonly string[] clampKeyword = HoyoToonDataManager.Data.Textures.ClampKeyword;
         private static readonly string[] nonSRGBKeywords = HoyoToonDataManager.Data.Textures.NonSRGBKeywords;
         private static readonly string[] EndsWithNonSRGBKeywords = HoyoToonDataManager.Data.Textures.EndsWithNonSRGBKeywords;
@@ -126,59 +127,74 @@ namespace HoyoToon
                     var importer = AssetImporter.GetAtPath(path) as TextureImporter;
                     if (importer == null) continue;
 
-                    bool settingsChanged = false;
+                    bool settingsMatch = true;
 
-                    if (importer.textureType != TextureImporterType.Default)
+                    // Check base settings
+                    if (importer.textureType != TextureImporterType.Default ||
+                        importer.textureCompression != TextureImporterCompression.Uncompressed ||
+                        importer.mipmapEnabled ||
+                        importer.streamingMipmaps)
                     {
+                        settingsMatch = false;
+                    }
+
+                    // Check conditional settings
+                    if (clampKeyword.Any(k => texture.name.IndexOf(k, System.StringComparison.InvariantCultureIgnoreCase) >= 0))
+                    {
+                        if (importer.wrapMode != TextureWrapMode.Clamp)
+                            settingsMatch = false;
+                    }
+
+                    // Check sRGB settings
+                    bool shouldBeSRGB = sRGBKeywords.Any(k => texture.name.IndexOf(k, System.StringComparison.InvariantCultureIgnoreCase) >= 0);
+                    bool shouldBeNonSRGB = nonSRGBKeywords.Any(k => texture.name.IndexOf(k, System.StringComparison.InvariantCultureIgnoreCase) >= 0) ||
+                                         EndsWithNonSRGBKeywords.Any(k => texture.name.EndsWith(k, System.StringComparison.InvariantCultureIgnoreCase));
+
+                    if (shouldBeSRGB && !importer.sRGBTexture)
+                        settingsMatch = false;
+                    if (shouldBeNonSRGB && importer.sRGBTexture)
+                        settingsMatch = false;
+                    if (!shouldBeSRGB && !shouldBeNonSRGB && !importer.sRGBTexture) // Default to sRGB if no keywords match
+                        settingsMatch = false;
+
+                    if (NonPower2Keywords.Any(k => texture.name.IndexOf(k, System.StringComparison.InvariantCultureIgnoreCase) >= 0))
+                    {
+                        if (importer.npotScale != TextureImporterNPOTScale.None)
+                            settingsMatch = false;
+                    }
+
+                    // If settings don't match, update them and mark for reimport
+                    if (!settingsMatch)
+                    {
+                        // Apply base settings
                         importer.textureType = TextureImporterType.Default;
-                        settingsChanged = true;
-                    }
-
-                    if (importer.textureCompression != TextureImporterCompression.Uncompressed)
-                    {
                         importer.textureCompression = TextureImporterCompression.Uncompressed;
-                        settingsChanged = true;
-                    }
-
-                    if (importer.mipmapEnabled)
-                    {
                         importer.mipmapEnabled = false;
-                        settingsChanged = true;
-                    }
-
-                    if (importer.streamingMipmaps)
-                    {
                         importer.streamingMipmaps = false;
-                        settingsChanged = true;
-                    }
 
-                    if (clampKeyword.Any(k => texture.name.IndexOf(k, System.StringComparison.InvariantCultureIgnoreCase) >= 0) && importer.wrapMode != TextureWrapMode.Clamp)
-                    {
-                        importer.wrapMode = TextureWrapMode.Clamp;
-                        settingsChanged = true;
-                    }
+                        // Apply conditional settings
+                        if (clampKeyword.Any(k => texture.name.IndexOf(k, System.StringComparison.InvariantCultureIgnoreCase) >= 0))
+                        {
+                            importer.wrapMode = TextureWrapMode.Clamp;
+                        }
 
-                    if (nonSRGBKeywords.Any(k => texture.name.IndexOf(k, System.StringComparison.InvariantCultureIgnoreCase) >= 0) && importer.sRGBTexture)
-                    {
-                        importer.sRGBTexture = false;
-                        settingsChanged = true;
-                    }
+                        // Apply sRGB settings
+                        if (shouldBeSRGB || (!shouldBeSRGB && !shouldBeNonSRGB))
+                        {
+                            importer.sRGBTexture = true;
+                        }
+                        else if (shouldBeNonSRGB)
+                        {
+                            importer.sRGBTexture = false;
+                        }
 
-                    if (NonPower2Keywords.Any(k => texture.name.IndexOf(k, System.StringComparison.InvariantCultureIgnoreCase) >= 0) && importer.npotScale != TextureImporterNPOTScale.None)
-                    {
-                        importer.npotScale = TextureImporterNPOTScale.None;
-                        settingsChanged = true;
-                    }
+                        if (NonPower2Keywords.Any(k => texture.name.IndexOf(k, System.StringComparison.InvariantCultureIgnoreCase) >= 0))
+                        {
+                            importer.npotScale = TextureImporterNPOTScale.None;
+                        }
 
-                    if (EndsWithNonSRGBKeywords.Any(k => texture.name.EndsWith(k, System.StringComparison.InvariantCultureIgnoreCase)) && importer.sRGBTexture)
-                    {
-                        importer.sRGBTexture = false;
-                        settingsChanged = true;
-                    }
-
-                    if (settingsChanged)
-                    {
                         pathsToReimport.Add(path);
+                        HoyoToonLogs.LogDebug($"Updating import settings for texture: {texture.name}");
                     }
                 }
             }
@@ -187,13 +203,17 @@ namespace HoyoToon
                 AssetDatabase.StopAssetEditing();
             }
 
-            foreach (var path in pathsToReimport)
+            // Only reimport textures that need updating
+            if (pathsToReimport.Count > 0)
             {
-                AssetDatabase.ImportAsset(path, ImportAssetOptions.ForceUpdate);
-            }
+                foreach (var path in pathsToReimport)
+                {
+                    AssetDatabase.ImportAsset(path, ImportAssetOptions.ForceUpdate);
+                }
 
-            AssetDatabase.SaveAssets();
-            AssetDatabase.Refresh();
+                AssetDatabase.SaveAssets();
+                AssetDatabase.Refresh();
+            }
         }
 
         #endregion
