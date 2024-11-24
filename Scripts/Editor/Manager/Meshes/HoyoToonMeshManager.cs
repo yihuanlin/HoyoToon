@@ -6,22 +6,23 @@ using System.Reflection;
 using System.IO;
 using System.Linq;
 using Newtonsoft.Json;
+using UnityEditor.Animations;
 
 namespace HoyoToon
 {
-    public class HoyoToonMeshManager : Editor
+    public class HoyoToonMeshManager : AssetPostprocessor
     {
         private static readonly List<string> SkipTangentMeshes = new List<string>(HoyoToonDataManager.Data.SkipMeshes);
         private static Dictionary<string, Dictionary<string, (string guid, string meshName)>> originalMeshPaths = new Dictionary<string, Dictionary<string, (string guid, string meshName)>>();
         private static readonly string HoyoToonFolder = Path.Combine(Directory.GetParent(Application.dataPath).FullName, "HoyoToon");
         private static readonly string OriginalMeshPathsFile = Path.Combine(HoyoToonFolder, "OriginalMeshPaths.json");
-
+        private static bool isProcessingHumanoid = false;
+        private static string processingPath = null;
+        
         #region FBX Setup
 
         public static void SetFBXImportSettings(IEnumerable<string> paths)
         {
-            bool changesMade = false;
-
             AssetDatabase.StartAssetEditing();
             try
             {
@@ -33,21 +34,15 @@ namespace HoyoToon
                     ModelImporter importer = AssetImporter.GetAtPath(p) as ModelImporter;
                     if (!importer) continue;
 
+                    // Set basic import settings
                     importer.globalScale = 1;
                     importer.isReadable = true;
                     importer.SearchAndRemapMaterials(ModelImporterMaterialName.BasedOnMaterialName, ModelImporterMaterialSearch.Everywhere);
-                    if (importer.animationType != ModelImporterAnimationType.Human || importer.avatarSetup != ModelImporterAvatarSetup.CreateFromThisModel)
-                    {
-                        importer.animationType = ModelImporterAnimationType.Human;
-                        importer.avatarSetup = ModelImporterAvatarSetup.CreateFromThisModel;
-                        changesMade = true;
-                    }
+                    
+                    // Configure humanoid
+                    ConfigureHumanoidAvatar(importer);
 
-                    if (ModifyAndSaveHumanoidBoneMapping(importer))
-                    {
-                        changesMade = true;
-                    }
-
+                    // Set legacy compute normals
                     string pName = "legacyComputeAllNormalsFromSmoothingGroupsWhenMeshHasBlendShapes";
                     PropertyInfo prop = importer.GetType().GetProperty(pName, BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public);
                     prop.SetValue(importer, true);
@@ -60,53 +55,135 @@ namespace HoyoToon
                 AssetDatabase.StopAssetEditing();
             }
 
-            if (changesMade)
-            {
-                AssetDatabase.SaveAssets();
-                AssetDatabase.Refresh();
-            }
+            AssetDatabase.SaveAssets();
+            AssetDatabase.Refresh();
         }
 
-        private static bool ModifyAndSaveHumanoidBoneMapping(ModelImporter importer)
+        private static void ConfigureHumanoidAvatar(ModelImporter importer)
         {
-            var humanDescription = importer.humanDescription;
-            var humanBones = new List<HumanBone>(humanDescription.human);
-            bool changesMade = false;
+            HoyoToonLogs.LogDebug($"Configuring avatar for: {importer.assetPath}");
+            
+            // Set up for humanoid conversion
+            importer.animationType = ModelImporterAnimationType.Human;
+            importer.avatarSetup = ModelImporterAvatarSetup.CreateFromThisModel;
+            
+            // Mark for post-processing
+            isProcessingHumanoid = true;
+            processingPath = importer.assetPath;
+            
+            // Apply initial settings
+            EditorUtility.SetDirty(importer);
+            importer.SaveAndReimport();
+        }
 
-            // Remove Jaw bone
-            changesMade |= humanBones.RemoveAll(bone => bone.humanName == "Jaw") > 0;
+        private void OnPreprocessModel()
+        {
+            // Only process if this is our target model
+            if (assetPath != processingPath)
+                return;
 
-            // Determine eye bone names
-            string leftEyeBoneName = humanBones.Any(bone => bone.boneName == "+EyeBoneLA02" || bone.boneName == "EyeBoneLA02") ? "+EyeBoneLA02" : "Eye_L";
-            string rightEyeBoneName = leftEyeBoneName == "+EyeBoneLA02" ? "+EyeBoneRA02" : "Eye_R";
+            ModelImporter modelImporter = assetImporter as ModelImporter;
+            if (modelImporter == null)
+                return;
 
-            // Update eye bones using a for loop
-            for (int i = 0; i < humanBones.Count; i++)
+            HoyoToonLogs.LogDebug($"Pre-processing model: {assetPath}");
+        }
+
+        private void OnPostprocessModel(GameObject root)
+        {
+            // Only process if this is our target model
+            if (assetPath != processingPath || !isProcessingHumanoid)
+                return;
+
+            ModelImporter modelImporter = assetImporter as ModelImporter;
+            if (modelImporter == null)
+                return;
+
+            HoyoToonLogs.LogDebug($"Post-processing model: {assetPath}");
+
+            // Get and modify human description
+            var description = modelImporter.humanDescription;
+            var human = description.human.ToList();
+            var skeleton = description.skeleton.ToList();
+            bool modified = false;
+
+            // Remove unwanted bones
+            modified |= human.RemoveAll(bone => bone.humanName == "Jaw") > 0;
+
+            // Update eye bones in human mapping
+            for (int i = 0; i < human.Count; i++)
             {
-                var bone = humanBones[i]; // Create a temporary variable
-                if (bone.humanName == "LeftEye" && bone.boneName != leftEyeBoneName)
+                var bone = human[i];
+                if (bone.humanName == "LeftEye" && bone.boneName != "+EyeBoneLA02" && bone.boneName != "Eye_L")
                 {
-                    bone.boneName = leftEyeBoneName;
-                    humanBones[i] = bone; // Assign it back to the list
-                    changesMade = true;
+                    // Try to find the appropriate eye bone name
+                    var leftEyeBone = FindRecursive(root.transform, "+EyeBoneLA02");
+                    bone.boneName = leftEyeBone != null ? "+EyeBoneLA02" : "Eye_L";
+                    human[i] = bone;
+                    HoyoToonLogs.LogDebug($"Updated LeftEye mapping to {bone.boneName}");
+                    modified = true;
                 }
-                else if (bone.humanName == "RightEye" && bone.boneName != rightEyeBoneName)
+                else if (bone.humanName == "RightEye" && bone.boneName != "+EyeBoneRA02" && bone.boneName != "Eye_R")
                 {
-                    bone.boneName = rightEyeBoneName;
-                    humanBones[i] = bone; // Assign it back to the list
-                    changesMade = true;
+                    // Try to find the appropriate eye bone name
+                    var rightEyeBone = FindRecursive(root.transform, "+EyeBoneRA02");
+                    bone.boneName = rightEyeBone != null ? "+EyeBoneRA02" : "Eye_R";
+                    human[i] = bone;
+                    HoyoToonLogs.LogDebug($"Updated RightEye mapping to {bone.boneName}");
+                    modified = true;
                 }
             }
 
-            if (changesMade)
+
+            // Update specific leg bone rotations in skeleton
+            for (int i = 0; i < skeleton.Count; i++)
             {
-                humanDescription.human = humanBones.ToArray();
-                importer.humanDescription = humanDescription;
-                AssetDatabase.SaveAssets();
-                AssetDatabase.Refresh();
+                var bone = skeleton[i];
+                // Find the corresponding human bone
+                var humanBone = human.FirstOrDefault(h => h.boneName == bone.name);
+                if (humanBone.humanName == "LeftUpperLeg" || humanBone.humanName == "RightUpperLeg")
+                {
+                    // Update the skeleton data for the upper leg bone
+                    bone.rotation = Quaternion.Euler(180f, 0f, 0f);
+                    skeleton[i] = bone;
+                    HoyoToonLogs.LogDebug($"Modified rotation for upper leg bone: {humanBone.humanName}");
+                    modified = true;
+                }
             }
 
-            return changesMade;
+            if (modified)
+            {
+                HoyoToonLogs.LogDebug("Applying bone mapping and rotation modifications");
+                description.human = human.ToArray();
+                description.skeleton = skeleton.ToArray();
+                modelImporter.humanDescription = description;
+                
+                // Apply changes
+                EditorUtility.SetDirty(modelImporter);
+                modelImporter.SaveAndReimport();
+            }
+
+            // Reset processing flags after we're done
+            isProcessingHumanoid = false;
+            processingPath = null;
+        }
+
+        private void OnPostprocessAvatar(GameObject root)
+        {
+            // Only process if this is our target model
+            if (assetPath != processingPath || !isProcessingHumanoid)
+                return;
+
+            HoyoToonLogs.LogDebug($"Post-processing avatar for: {assetPath}");
+            
+            // Get the avatar
+            Avatar avatar = AssetDatabase.LoadAllAssetsAtPath(assetPath)
+                .FirstOrDefault(x => x is Avatar) as Avatar;
+                
+            if (avatar != null)
+            {
+                HoyoToonLogs.LogDebug($"Avatar configuration - Name: {avatar.name}, Valid: {avatar.isValid}, Human: {avatar.isHuman}");
+            }
         }
 
         #endregion
@@ -167,7 +244,7 @@ namespace HoyoToon
             if (mesh == null) return null;
 
             Mesh newMesh;
-            if (HoyoToonParseManager.currentBodyType == HoyoToonParseManager.BodyType.Hi3P2)
+            if (HoyoToonParseManager.currentBodyType == HoyoToonParseManager.BodyType.HI3P2)
             {
                 newMesh = MoveColors(mesh);
             }
@@ -328,7 +405,7 @@ namespace HoyoToon
             string modelName = rootObject.name;
             if (!originalMeshPaths.ContainsKey(modelName))
             {
-                Debug.LogError($"No stored mesh paths found for model: {modelName}");
+                HoyoToonLogs.ErrorDebug($"No stored mesh paths found for model: {modelName}");
                 return;
             }
 
@@ -369,11 +446,9 @@ namespace HoyoToon
                 }
             }
 
-            Debug.LogWarning($"Original mesh not found for {meshName}. Unable to reset.");
+            HoyoToonLogs.ErrorDebug($"Original mesh not found for {meshName}. Unable to reset.");
             return null;
         }
-
-        #endregion
 
         private static GameObject GetRootParent(GameObject obj)
         {
@@ -418,6 +493,22 @@ namespace HoyoToon
 
             string json = JsonConvert.SerializeObject(serializableDictionary, Formatting.Indented);
             File.WriteAllText(OriginalMeshPathsFile, json);
+        }
+
+        #endregion
+
+        // Add this helper method to find transforms recursively
+        private Transform FindRecursive(Transform parent, string name)
+        {
+            if (parent.name == name) return parent;
+            
+            foreach (Transform child in parent)
+            {
+                Transform found = FindRecursive(child, name);
+                if (found != null) return found;
+            }
+            
+            return null;
         }
     }
 }
