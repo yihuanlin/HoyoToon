@@ -69,7 +69,8 @@ Shader "HoyoToon/Genshin/Character"
                     {value:4,actions:[{type:SET_PROPERTY,data:_SrcBlend=5},{type:SET_PROPERTY,data:_DstBlend=10},{type:SET_PROPERTY,data:render_queue=2225}]}]}", Int) = 0
                 // _TestValue ("waa", Float) = 0
                 _MainTexAlphaCutoff("Alpha Cuttoff--{condition_show:{type:PROPERTY_BOOL,data:_MainTexAlphaUse==1.0}}", Range(0, 1.0)) = 0.5
-            [HideInInspector] end_mainalpha ("", Float) = 0
+                [Toggle] _EnableDithering ("Alpha Dithering", Float) = 0
+                [HideInInspector] end_mainalpha ("", Float) = 0
             // Detail Line
             //ifex _TextureLineUse == 0
             [HideInInspector] start_maindetail ("Details--{reference_property:_TextureLineUse}", Float) = 0
@@ -236,19 +237,19 @@ Shader "HoyoToon/Genshin/Character"
                     {value:0,actions:[{type:SET_PROPERTY,data:_RimLightType=0}]},
                     {value:1,actions:[{type:SET_PROPERTY,data:_RimLightType=2}]}
                     ]}", Float) = 1
-                _ES_AvatarRimWidth  ("Rim Light Width--{condition_show:{type:PROPERTY_BOOL,data:_RimLightType==2.0}}", Range(0.0, 10.0)) = 3.0
-                _ES_AvatarRimWidthScale ("Rim Light Width Scale--{condition_show:{type:PROPERTY_BOOL,data:_RimLightType==2.0}}", Range(0.0, 10.0)) = 1.0
+                _ES_AvatarRimWidth  ("Rim Light Width--{condition_show:{type:PROPERTY_BOOL,data:_RimLightType==2.0}}", Range(0.0, 10.0)) = 1.5
+                _ES_AvatarRimWidthScale ("Rim Light Width Scale--{condition_show:{type:PROPERTY_BOOL,data:_RimLightType==2.0}}", Range(0.0, 10.0)) = 1
                 _RimThreshold ("Rim Threshold--{condition_show:{type:PROPERTY_BOOL,data:_RimLightType==1.0}}", Range(0.0, 1.0)) = 0.5
                 _RimLightIntensity ("Rim Light Intensity--{condition_show:{type:PROPERTY_BOOL,data:_RimLightType==1.0}}", Float) = 0.25
                 _RimLightThickness ("Rim Light Thickness--{condition_show:{type:PROPERTY_BOOL,data:_RimLightType==1.0}}", Range(0.0, 10.0)) = 1.0
                 [HideInInspector] start_rimfront ("Front Parameters--{condition_show:{type:PROPERTY_BOOL,data:_RimLightType==2.0}}", Float) = 0
                     _ES_AvatarFrontRimColor ("Front Rim Light Color--{condition_show:{type:PROPERTY_BOOL,data:_RimLightType==2.0}}", Color) = (1, 1, 1, 1)
-                    _ES_AvatarFrontRimIntensity ("Front Rim Light Intensity--{condition_show:{type:PROPERTY_BOOL,data:_RimLightType==2.0}}", Float) = 1.0
+                    _ES_AvatarFrontRimIntensity ("Front Rim Light Intensity--{condition_show:{type:PROPERTY_BOOL,data:_RimLightType==2.0}}", Float) = 1
                 [HideInInspector] end_rimfront ("", Float) = 0
                 // rim back
                 [HideInInspector] start_rimback ("Back Parameters--{condition_show:{type:PROPERTY_BOOL,data:_RimLightType==2.0}}", Float) = 0
                     _ES_AvatarBackRimColor ("Back Rim Light Color--{condition_show:{type:PROPERTY_BOOL,data:_RimLightType==2.0}}", Color) = (1, 1, 1, 1)
-                    _ES_AvatarBackRimIntensity ("Back Rim Light Intensity--{condition_show:{type:PROPERTY_BOOL,data:_RimLightType==2.0}}", Float) = 1.0
+                    _ES_AvatarBackRimIntensity ("Back Rim Light Intensity--{condition_show:{type:PROPERTY_BOOL,data:_RimLightType==2.0}}", Float) = 1
                 [HideInInspector] end_rimback ("", Float) = 0
                 [HideInInspector] start_lightingrimcolor("Rimlight Color--{condition_show:{type:PROPERTY_BOOL,data:_RimLightType>=1.0}}", Float) = 0
                     _RimColor (" Rim Light Color", Color)   = (1, 1, 1, 1)
@@ -363,6 +364,7 @@ Shader "HoyoToon/Genshin/Character"
             [Toggle] _FallbackOutlines ("Enable Static Outlines", Float) = 0
             _OutlineWidth ("Outline Width", Float) = 0.03
             _Scale ("Outline Scale", Float) = 0.01
+            _OutlineOffsetBlockBChannel ("Use Vertex Color B Channel", Float) = 0
             [Toggle] [HideInInspector] _UseClipPlane ("Use Clip Plane?", Float) = 0.0
             [HideInInspector] start_outlinestex("Outline Texture--{condition_show:{type:PROPERTY_BOOL,data:_UseOutlineTex==1.0}}", Float) = 0
                 [SmallTexture] _OutlineTex ("Outline Width Texture", 2D) = "black"{}
@@ -546,7 +548,7 @@ Shader "HoyoToon/Genshin/Character"
                 //ifex _HandEffectEnable == 0
                 [HideInInspector] start_asmodayarm("Asmoday Arm Effect--{reference_property:_HandEffectEnable}", Float) = 0
                     [Toggle] _HandEffectEnable ("Enable Asmoday Arm Effect", Float) = 0
-                    _LightColor ("Light Color", Color) = (0.4117647,0.1665225,0.1665225,0)
+                    // _LightColor ("Light Color", Color) = (0.4117647,0.1665225,0.1665225,0)
                     _ShadowColor ("Shadow Color", Color) = (0.2941176,0.1319204,0.1319204,0)
                     _ShadowWidth ("Shadow Width", Range(0, 1)) = 0.5764706
                     _LineColor ("Line Color", Color) = (1,1,1,0)
@@ -665,9 +667,23 @@ Shader "HoyoToon/Genshin/Character"
             [HideInInspector] end_hueshift ("", float) = 0
             //endex
             // Nyx State
-            [HideInInspector] start_nyx("NightSoul--{reference_property:_EnableNyxState}", Float) = 0
-                [Toggle] _EnableNyxState ("Enable NightSoul--{on_value_actions:[{value:0,actions:[{type:SET_PROPERTY,data:_EnableNyxBody=0},{type:SET_PROPERTY,data:_EnableNyxOutline=0}]}, {value:1,actions:[{type:SET_PROPERTY,data:_EnableNyxBody=1},{type:SET_PROPERTY,data:_EnableNyxOutline=1}]}]}", Float) = 0
+            [HideInInspector] start_nyx("NightSoul", Float) = 0
+                // [Toggle] _EnableNyxState ("Enable NightSoul--{on_value_actions:[{value:0,actions:[{type:SET_PROPERTY,data:_EnableNyxBody=0},{type:SET_PROPERTY,data:_EnableNyxOutline=0}]}, {value:1,actions:[{type:SET_PROPERTY,data:_EnableNyxBody=1},{type:SET_PROPERTY,data:_EnableNyxOutline=1}]}]}", Float) = 0
+                [Enum(Premade, 0, Custom, 1)] _NyxStateRampType ("Ramp Type", Float) = 0
                 [NoScaleOffset] _NyxStateOutlineColorRamp ("Color Ramp", 2D) = "gray" { }
+                [HideInInspector] start_customramp("Custom Ramp Settings", Float) = 0
+                    // [NoScaleOffset] _DefaultRamp ("GreyScale Ramp", 2D) = "gray" {}
+                    _RampPoint0 ("Color Ramp Point 0", Color) = (0.00,0.00,0.00,0)
+                    // _RampPointPos0 ("Color Ramp Point 0 Position", Range(0, 1)) = 0
+                    _RampPoint1 ("Color Ramp Point 1", Color) = (0.25,0.25,0.25,1)
+                    // _RampPointPos1 ("Color Ramp Point 1 Position", Range(0, 1)) = 0.25
+                    _RampPoint2 ("Color Ramp Point 2", Color) = (0.50,0.50,0.50,1)
+                    // _RampPointPos2 ("Color Ramp Point 2 Position", Range(0, 1)) = 0.50
+                    // _RampPoint3 ("Color Ramp Point 3", Color) = (0.75,0.75,0.75,1)
+                    // _RampPointPos3 ("Color Ramp Point 3 Position", Range(0, 1)) = 0.75
+                    // _RampPoint4 ("Color Ramp Point 4", Color) = (1.00,1.00,1.00,1)
+                    // _RampPointPos4 ("Color Ramp Point 4 Position", Range(0, 1)) = 1.00
+                [HideInInspector] end_customramp ("", Float) = 0
                 [NoScaleOffset] _NyxStateOutlineNoise ("Noise(RG)", 2D) = "gray" { }
                 [Vector2] _NyxStateOutlineColorNoiseScale ("Noise Scale", Vector) = (2,2,0,0)
                 _NyxStateOutlineColorNoiseAnim ("Noise Speed", Vector) = (0.05,0.05,0,0)
@@ -702,6 +718,143 @@ Shader "HoyoToon/Genshin/Character"
                 [HideInInspector] end_nyxoutline ("", Float) = 0
 
             [HideInInspector] end_nyx("NightSoul", Float) = 0
+            // Mavuika VAT
+            //ifex _VertexAnimType == 0
+            [HideInInspector] start_vat("Vertex Animation", Float) = 0
+                    [HoyoToonWideEnum(Off, 0, Hair A, 1, Hair B, 2)] _VertexAnimType ("Vertex Animation Type--{on_value_actions:[
+                    {value:0,actions:[{type:SET_PROPERTY,data:_EnableHairVat=0},{type:SET_PROPERTY,data:_EnableHairVertexVat=0}]},
+                    {value:1,actions:[{type:SET_PROPERTY,data:_EnableHairVat=1},{type:SET_PROPERTY,data:_EnableHairVertexVat=1}]},
+                    {value:2,actions:[{type:SET_PROPERTY,data:_EnableHairVat=0},{type:SET_PROPERTY,data:_EnableHairVertexVat=0}]}
+                    ]}", Int) = 0 
+                    // {value:2,actions:[{type:SET_PROPERTY,data:_EnableHairVat=1}]}
+                    [HideInInspector] start_vatb_textures ("Vertex Animation Textures--{condition_show:{type:PROPERTY_BOOL,data:_VertexAnimType==2.0}}", Float) = 0
+                        _PosTex_A ("Position Texture A", 2D) = "white" { }
+                    [HideInInspector] end_vatb_textures ("", Float) = 0
+                    [HideInInspector] start_vat_frame ("Frame Settings", Float) = 0
+                        _FrameCount ("Frame Count", Float) = 100
+                        _Speed ("Speed", Float) = 1
+                        [Toggle] _IfAutoPlayback ("Auto Playback", Float) = 1
+                        _CurrentFrame ("Current Frame", Float) = 0
+                        _HoudiniFPS ("Houdini FPS", Float) = 30
+                        _TimeShift ("Time Shift", Float) = 1
+                        [Toggle] _IfInterframeInterp ("Interframe Interpolation", Float) = 1
+                        [HideInInspector] start_vat_bounds ("Bounds", Float) = 0
+                            _BoundMaxX ("Bound Max X", Float) = 0
+                            _BoundMaxY ("Bound Max Y", Float) = 0
+                            _BoundMaxZ ("Bound Max Z", Float) = 0
+                            _BoundMinX ("Bound Min X", Float) = 0
+                            _BoundMinY ("Bound Min Y", Float) = 0
+                            _BoundMinZ ("Bound Min Z", Float) = 0
+                        [HideInInspector] end_vat_bounds ("", Float) = 0
+                    [HideInInspector] end_vat_frame ("", Float) = 0
+                    [HideInInspector] start_vat_textures ("Vertex Shader Settings--{condition_show:{type:PROPERTY_BOOL,data:_VertexAnimType==1.0}, reference_property:_EnableHairVat}", Float) = 0
+                        [Toggle] _EnableHairVat ("Enable Vertex Animation (VS) --{condition_show:{type:PROPERTY_BOOL,data:_VertexAnimType==1.0}}", Float) = 0
+                        _VertexTex ("Vertex Animation Texture (VS)", 2D) = "white" { }
+                        _VertexTexST ("Vertex Animation Texture Scale/Transform", Vector) = (1,1,0,0)
+                        [Enum(R,0,G,1,B,2,A,3)] _VertexTexSwitch ("VretexTexSwitch", Float) = 1
+                        _VertexTexUS ("VretexTexUS", Float) = 0
+                        _VertexTexVS ("VretexTexVS", Float) = 0
+                        _VertexAdd ("VertexAdd", Float) = 0
+                        _VertexPower ("VertexPower", Float) = 0
+                        _VertexMask ("VertexMask", Range(0, 1.1)) = 1.1
+                    [HideInInspector] end_vat_textures ("", Float) = 0
+                    [HideInInspector] start_vatps_textures ("Pixel Shader Settings--{condition_show:{type:PROPERTY_BOOL,data:_VertexAnimType==1.0}, reference_property:_EnableHairVertexVat}", Float) = 0
+                        [Toggle] _EnableHairVertexVat ("Enable Vertex Animation (PS) --{condition_show:{type:PROPERTY_BOOL,data:_VertexAnimType==1.0}}", Float) = 0
+                        _VertTex ("Vertex Animation Texture (PS)", 2D) = "white" { }
+                        _VertTexST ("Vertex Animation Texture Scale/Transform", Vector) = (1,1,0,0)
+                        [Enum(R,0,G,1,B,2,A,3)] _VertTexSwitch ("VretexTexSwitch", Float) = 1
+                        _VertTexUS ("VretexTexUS", Float) = 0
+                        _VertTexVS ("VretexTexVS", Float) = 0
+                        _VertAdd ("VertexAdd", Float) = 0
+                        _VertPower ("VertexPower", Float) = 0
+                        _VertMask ("VertexMask", Range(0, 1.1)) = 1.1
+                    [HideInInspector] end_vatps_textures ("", Float) = 0
+                    [HideInInspector] start_vat_shading("Shading", Float) = 0
+                        // hair a things 
+                            _LerpTexture ("Blend Tex--{condition_show:{type:PROPERTY_BOOL,data:_VertexAnimType==1.0}}", 2D) = "white" { }
+                            _LerpTextureST ("Blend Texture Scale/Transform--{condition_show:{type:PROPERTY_BOOL,data:_VertexAnimType==1.0}}", Vector) = (1,1,0,0)
+                        // end of hair a things
+                        [HDR] _AllColorBrightness ("Overall Brightness", Color) = (1,1,1,1)
+                        _DayColor ("Day Color", Color) = (1,1,1,1)
+                        // more hair a things
+                            [HDR] _LightColor ("Light Color--{condition_show:{type:PROPERTY_BOOL,data:_VertexAnimType==1.0}}", Color) = (1,1,1,1)
+                            [HDR] _DarkColor ("Dark Color--{condition_show:{type:PROPERTY_BOOL,data:_VertexAnimType==1.0}}", Color) = (1,1,1,1)
+                            [HDR] _HighlightsColor ("Highlights Color--{condition_show:{type:PROPERTY_BOOL,data:_VertexAnimType==1.0}}", Color) = (1,1,1,1)
+                            [HDR] _AhomoColor ("Ahomo Color--{condition_show:{type:PROPERTY_BOOL,data:_VertexAnimType==1.0}}", Color) = (1,1,1,1)
+                            _NoisePowerForLerpTex ("Blend Power--{condition_show:{type:PROPERTY_BOOL,data:_VertexAnimType==1.0}}", Float) = 0
+                            _HighlightsBrightness ("Highlight Brightness--{condition_show:{type:PROPERTY_BOOL,data:_VertexAnimType==1.0}}", Float) = 0
+                            _HighlightsSpeed ("Highlight Flicker Speed--{condition_show:{type:PROPERTY_BOOL,data:_VertexAnimType==1.0}}", Float) = 0
+                        // end of hair a things
+                        // hair b things
+                        [HideInInspector] start_vat_ramp ("Ramp Settings--{condition_show:{type:PROPERTY_BOOL,data:_VertexAnimType==2.0}}", Float) = 0
+                            _VerticalRampTex ("Ramp A", 2D) = "white" { }
+                            _VerticalRampTex2 ("Ramp B", 2D) = "white" { }
+                            _VerticalRampLerp ("Ramp Lerp Factor", Range(0, 1)) = 0
+                            _VerticalRampTint ("Ramp Tint", Color) = (1,1,1,1)
+                        [HideInInspector] end_vat_ramp ("", Float) = 0
+                        [HideInInspector] start_vat_highlight ("Highlights--{condition_show:{type:PROPERTY_BOOL,data:_VertexAnimType==2.0}}", Float) = 0
+                            _HighlightMaskTex ("HighlightMaskTex", 2D) = "black" { }
+                            [Enum(R,0,G,1,B,2,A,3)] _HighlightMaskTexChannelSwitch ("HighlightMaskTexSwitch", Float) = 0
+                            _HighlightMaskTex2 ("HighlightMaskTex2", 2D) = "black" { }
+                            [Enum(R,0,G,1,B,2,A,3)] _HighlightMaskTex2ChannelSwitch ("HighlightMaskTex2Switch", Float) = 0
+                            [Toggle] _HighlightMaskTex2VOffsetByVerColA ("HighlightMaskTex2 V Offset By VerCol A", Float) = 0
+                            [HDR] _HighlightColor ("HighlightColor", Color) = (1,1,1,0)
+                            [HDR] _HighlightColor2 ("HighlightColor2", Color) = (1,1,1,0)
+                        [HideInInspector] end_vat_highlight ("", Float) = 0
+                        [HideInInspector] start_vatfade("Fade", Float) = 0
+                            [Toggle] _DisappearByVerColAlpha ("Disappear By Vertex Color Alpha", Float) = 0
+                            [Toggle] _VerticalFadeToggle ("Vertical Fade Toggle", Float) = 0
+                            _VerticalFadeOffset ("Vertical Fade Offset", Range(0, 1)) = 0.5
+                            _VerticalFadeRange ("Vertical Fade Range", Range(0, 1)) = 0.5
+                        [HideInInspector] end_vatfade("", Float) = 0
+                    [HideInInspector] end_vat_shading("", Float) = 0
+            [HideInInspector] end_vat ("", float) = 0
+            //endex 
+
+            [HideInInspector] start_fakelight("Fake Point Light", float) = 0
+                [HideInInspector] start_firstlight("Fake Light One", Float) = 1
+                    [Toggle] _UseFakePoint ("Use FakePoint", Float) = 0
+                    _FakePointNoiseTex ("Light Noise Tex", 2D) = "white" { }
+                    _FakePointColor ("Light Color", Color) = (1,1,1,1)
+                    _FakePointRange ("Light Range", Float) = 1
+                    _FakePointIntensity ("Light Intensity", Float) = 1
+                    _FakePointPosition ("Light Position", Vector) = (0,0,0,0)
+                    _FakePointReflection ("Light Reflection", Float) = 1
+                    _FakePointFrequency ("Light Frequency", Float) = 0
+                    _FakePointFrequencyMin ("Light Frequency Min", Float) = 0
+                    _FakePointSkinIntensity ("Light On Skin Intensity", Float) = 1
+                    _FakePointSkinSaturate ("Light On Skin Saturation", Float) = 0
+                [HideInInspector] end_firstlight("", float) = 0
+                [HideInInspector] start_secondlight("Fake Light Two", Float) = 1
+                    [Toggle] _UseFakePoint2 ("Use FakePoint", Float) = 0
+                    _FakePointNoiseTex2 ("Light Noise Tex", 2D) = "white" { }
+                    _FakePointColor2 ("Light Color", Color) = (1,1,1,1)
+                    _FakePointRange2 ("Light Range", Float) = 1
+                    _FakePointIntensity2 ("Light Intensity", Float) = 1
+                    _FakePointPosition2 ("Light Position", Vector) = (0,0,0,0)
+                    _FakePointReflection2 ("Light Reflection", Float) = 1
+                    _FakePointFrequency2 ("Light Frequency", Float) = 0
+                    _FakePointFrequencyMin2 ("Light Frequency Min", Float) = 0
+                    _FakePointSkinIntensity2 ("Light On Skin Intensity", Float) = 1
+                    _FakePointSkinSaturate2 ("Light On Skin Saturation", Float) = 0
+                [HideInInspector] end_secondlight("", float) = 0
+                [HideInInspector] start_thirdlight("Fake Light Three", Float) = 1
+                    [Toggle] _UseFakePoint3 ("Use FakePoint", Float) = 0
+                    _FakePointNoiseTex3 ("Light Noise Tex", 2D) = "white" { }
+                    _FakePointColor3 ("Light Color", Color) = (1,1,1,1)
+                    _FakePointRange3 ("Light Range", Float) = 1
+                    _FakePointIntensity3 ("Light Intensity", Float) = 1
+                    _FakePointPosition3 ("Light Position", Vector) = (0,0,0,0)
+                    _FakePointReflection3 ("Light Reflection", Float) = 1
+                    _FakePointFrequency3 ("Light Frequency", Float) = 0
+                    _FakePointFrequencyMin3 ("Light Frequency Min", Float) = 0
+                    _FakePointSkinIntensity3 ("Light On Skin Intensity", Float) = 1
+                    _FakePointSkinSaturate3 ("Light On Skin Saturation", Float) = 0
+                [HideInInspector] end_thirdlight("", float) = 0
+            [HideInInspector] end_fakelight("", float) = 0
+
+            // [HideInInspector] start_dissolve("Dissolve", Float) = 0
+            // [HideInInspector] end_dissolve ("", Float) = 0
         [HideInInspector] end_specialeffects ("", Float) = 0
         //Special Effects End
 
@@ -811,6 +964,9 @@ Shader "HoyoToon/Genshin/Character"
         //ifex _DebugMode == 0
             #define can_debug
         //endex 
+        //ifex _VertexAnimType == 0
+            #define use_vat
+        //endex
 
         #include "UnityCG.cginc"
         #include "UnityLightingCommon.cginc"

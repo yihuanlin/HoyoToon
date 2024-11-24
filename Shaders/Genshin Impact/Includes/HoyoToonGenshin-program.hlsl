@@ -6,6 +6,174 @@ vs_out vs_model(vs_in v)
     UNITY_SETUP_INSTANCE_ID(v); 
     UNITY_INITIALIZE_OUTPUT(vs_out, o); 
     UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(o); 
+    #if defined(use_vat)
+    if(_VertexAnimType == 1)
+    {
+        mavuika_vat_vs(v.vertex, v.uv_1.xy, v.normal, v.v_col);
+    }
+    else if (_VertexAnimType == 2)
+    {
+        o.pos = v.vertex;
+
+        float4 pos_ws  = mul(unity_ObjectToWorld, v.vertex);
+        float4 pos_wvp = mul(UNITY_MATRIX_VP, pos_ws);
+        o.pos = pos_wvp;
+
+        float check_a = v.v_col.w == 0 || v.v_col.w == 1;
+        check_a = (_DisappearByVerColAlpha) ? check_a : 0.0f;
+
+
+        if(check_a)
+        {
+            o = (vs_out)0.0f;
+            return o;
+        }
+        float4 vs_COLOR0;
+        float3 vs_TEXCOORD0;
+        float3 vs_TEXCOORD1;
+        float3 vs_TEXCOORD2;
+        float4 vs_TEXCOORD3;
+        float4 vs_TEXCOORD4;
+        float4 u_xlat0;
+        uint4 u_xlatu0;
+        float2 u_xlatb0;
+        float4 u_xlat1;
+        float4 u_xlat2;
+        float3 u_xlat16_3;
+        float3 u_xlat4;
+        uint3 u_xlatu4;
+        float3 u_xlat16_5;
+        float3 u_xlat16_6;
+        float3 u_xlat16_7;
+        float3 u_xlat16_8;
+        bool u_xlatb9;
+        bool u_xlatb10;
+        float2 u_xlat18;
+        float u_xlat27;
+        float u_xlat28;
+        bool u_xlatb28;
+
+        u_xlat0.x = (-v.uv_1.y) + 1.0;
+
+        u_xlatb9 = 9.99999975e-06<_IfAutoPlayback;
+
+        u_xlat18.x = _Time.y * _Speed;
+        u_xlat18.x = u_xlat18.x * _HoudiniFPS;
+        u_xlat18.x = u_xlat18.x / _FrameCount;
+        u_xlat18.x = frac(u_xlat18.x);
+        u_xlat27 = u_xlat18.x * _FrameCount;
+        u_xlat1.x = frac(u_xlat27);
+        u_xlat27 = floor(u_xlat27);
+        u_xlat27 = u_xlat27 / _FrameCount;
+
+        u_xlatb10 = u_xlat27>=(-u_xlat27);
+
+        u_xlat27 = frac(abs(u_xlat27));
+        u_xlat18.y = (u_xlatb10) ? u_xlat27 : (-u_xlat27);
+        u_xlat18.x = u_xlat18.x * _FrameCount + 1.0;
+        u_xlat18.x = floor(u_xlat18.x);
+        u_xlat18.x = u_xlat18.x / _FrameCount;
+
+        u_xlatb10 = u_xlat18.x>=(-u_xlat18.x);
+
+        u_xlat18.x = frac(abs(u_xlat18.x));
+        u_xlat18.x = (u_xlatb10) ? u_xlat18.x : (-u_xlat18.x);
+        u_xlat18.xy = u_xlat18.xy * float2(float2(_FrameCount, _FrameCount));
+
+        u_xlatb10 = abs(u_xlat18.x)<9.99999975e-06;
+
+        u_xlat1.z = (u_xlatb10) ? 0.0 : u_xlat1.x;
+        u_xlat18.xy = u_xlat18.xy / float2(_FrameCount, _FrameCount);
+        u_xlat18.xy = u_xlat0.xx + u_xlat18.xy;
+        u_xlat1.xy = (-u_xlat18.yx) + float2(1.0, 1.0);
+        u_xlat18.x = floor(_CurrentFrame);
+        u_xlat18.y = u_xlat18.x + -1.0;
+        u_xlat18.xy = u_xlat18.xy / float2(_FrameCount, _FrameCount);
+
+        u_xlatb28 = u_xlat18.y>=(-u_xlat18.y);
+
+        u_xlat27 = frac(abs(u_xlat18.y));
+        u_xlat18.y = (u_xlatb28) ? u_xlat27 : (-u_xlat27);
+
+        u_xlatb28 = u_xlat18.x>=(-u_xlat18.x);
+
+        u_xlat18.x = frac(abs(u_xlat18.x));
+        u_xlat18.x = (u_xlatb28) ? u_xlat18.x : (-u_xlat18.x);
+        u_xlat18.xy = u_xlat18.xy * float2(_FrameCount, _FrameCount);
+        u_xlat18.xy = u_xlat18.xy / float2(_FrameCount, _FrameCount);
+        u_xlat0.w = u_xlat0.x + u_xlat18.y;
+        u_xlat0.x = u_xlat0.x + u_xlat18.x;
+        u_xlat2.xy = (-u_xlat0.wx) + float2(1.0, 1.0);
+        u_xlat2.z = frac(_CurrentFrame);
+        u_xlat0.xyz = (bool(u_xlatb9)) ? u_xlat1.xyz : u_xlat2.xyz;
+        u_xlat1.x = dot(v.normal.xyz, v.normal.xyz);
+        u_xlat1.x = rsqrt(u_xlat1.x);
+        u_xlat1.xyz = u_xlat1.xxx * v.normal.xyz;
+        u_xlat28 = dot(v.tangent.xyz, v.tangent.xyz);
+        u_xlat28 = rsqrt(u_xlat28);
+        u_xlat2.xyz = u_xlat28 * v.tangent.xyz;
+        u_xlat16_3.xyz = u_xlat1.zxy * u_xlat2.yzx;
+        u_xlat16_3.xyz = u_xlat1.yzx * u_xlat2.zxy + (-u_xlat16_3.xyz);
+        u_xlat0.w = v.uv_1.x;
+        u_xlat4.xyz = _PosTex_A.SampleLevel(sampler_linear_repeat, u_xlat0.wx, 0).xyz;
+        u_xlat16_5.xyz = u_xlat4.xyz * float3(255.0, 255.0, 255.0);
+        u_xlatu4.xyz = uint3(u_xlat16_5.xyz);
+        u_xlatu4.xyz = (uint3)u_xlatu4.xyz << int3(8, 8, 8);
+        u_xlat4.xyz = uint3(u_xlatu4.xyz);
+        u_xlat4.xyz = u_xlat4.xyz * float3(1.52590219e-05, 1.52590219e-05, 1.52590219e-05);
+        u_xlat16_5.x = _BoundMinX;
+        u_xlat16_5.yz = float2(_BoundMinY, _BoundMinZ);
+        u_xlat16_6.xyz = (-u_xlat16_5.xyz) + float3(_BoundMaxX, _BoundMaxY, _BoundMaxZ);
+        u_xlat16_7.xyz = u_xlat4.xyz * u_xlat16_6.xyz + u_xlat16_5.xyz;
+
+        if(_IfInterframeInterp){
+            u_xlat0.xyw =  _PosTex_A.SampleLevel(sampler_linear_repeat, u_xlat0.wy,0).xyz;
+            u_xlat16_8.xyz = u_xlat0.xyw * float3(255.0, 255.0, 255.0);
+            u_xlatu0.xyw = uint3(u_xlat16_8.xyz);
+            u_xlatu0.xyw = (uint3)u_xlatu0.xyw << int3(8, 8, 8);
+            u_xlat0.xyw = uint3(u_xlatu0.xyw);
+            u_xlat0.xyw = u_xlat0.xyw * float3(1.52590219e-05, 1.52590219e-05, 1.52590219e-05);
+            u_xlat16_5.xyz = u_xlat0.xyw * u_xlat16_6.xyz + u_xlat16_5.xyz;
+            u_xlat0.xyw = (-u_xlat16_7.xyz) + u_xlat16_5.xyz;
+            u_xlat0.xyz = u_xlat0.xyw * u_xlat0.zzz + u_xlat16_7.xyz;
+        } else {
+            u_xlat0.xyz = u_xlat16_7.xyz;
+        }
+        u_xlat4.xyz = u_xlat16_3.xyz * u_xlat0.yyy;
+        u_xlat0.xyw = u_xlat0.xxx * u_xlat2.xyz + u_xlat4.xyz;
+        u_xlat0.xyz = u_xlat0.zzz * u_xlat1.xyz + u_xlat0.xyw;
+        u_xlat0.xyz = u_xlat0.xyz + v.vertex.xyz;
+        // u_xlat1 = u_xlat0.yyyy * unity_ObjectToWorld[1];
+        // u_xlat1 = unity_ObjectToWorld[0] * u_xlat0.xxxx + u_xlat1;
+        // u_xlat0 = unity_ObjectToWorld[2] * u_xlat0.zzzz + u_xlat1;
+        // u_xlat1 = u_xlat0 + unity_ObjectToWorld[3];
+        // u_xlat2 = u_xlat1.yyyy * unity_MatrixVP[1];
+        // u_xlat2 = unity_MatrixVP[0] * u_xlat1.xxxx + u_xlat2;
+        // u_xlat2 = unity_MatrixVP[2] * u_xlat1.zzzz + u_xlat2;
+        // u_xlat1 = unity_MatrixVP[3] * u_xlat1.wwww + u_xlat2;
+        o.pos = UnityObjectToClipPos(u_xlat0);
+        u_xlat2.x = dot(v.normal.xyz, unity_WorldToObject[0].xyz);
+        u_xlat2.y = dot(v.normal.xyz, unity_WorldToObject[1].xyz);
+        u_xlat2.z = dot(v.normal.xyz, unity_WorldToObject[2].xyz);
+        u_xlat27 = dot(u_xlat2.xyz, u_xlat2.xyz);
+        u_xlat27 = rsqrt(u_xlat27);
+        o.normal.xyz = u_xlat27 * u_xlat2.xyz;
+        u_xlat0.xyz = unity_ObjectToWorld[3].xyz * v.vertex.www + u_xlat0.xyz;
+        u_xlat2.xyz = (-u_xlat0.xyz) + _WorldSpaceCameraPos.xyz;
+        u_xlat27 = dot(u_xlat2.xyz, u_xlat2.xyz);
+        u_xlat27 = rsqrt(u_xlat27);
+        vs_TEXCOORD2.xyz = u_xlat27 * u_xlat2.xyz;
+        u_xlat2.xz = u_xlat1.xw * float2(0.5, 0.5);
+        u_xlat27 = u_xlat1.y * _ProjectionParams.x;
+        u_xlat2.w = u_xlat27 * 0.5;
+        vs_TEXCOORD4.xy = u_xlat2.zz + u_xlat2.xw;
+        // o.pos = u_xlat1;
+        o.v_col = v.v_col;
+        o.uv_a = v.uv_0.xyxy;
+        o.ss_pos = ComputeScreenPos(o.pos);
+        return o;
+    }
+    #endif
 
     float4 pos_ws  = mul(unity_ObjectToWorld, v.vertex);
     float4 pos_wvp = mul(UNITY_MATRIX_VP, pos_ws);
@@ -20,7 +188,7 @@ vs_out vs_model(vs_in v)
     o.view = camera_position() - mul(unity_ObjectToWorld, v.vertex).xyz;
     o.n_view.xyz = -mul(unity_ObjectToWorld, v.vertex).xyz + unity_ObjectToWorld[3].xyz;
     o.n_view = float4(_DummyFixedForNormal ? o.n_view : o.view, 1.0f);
-    o.ws_pos =  mul(unity_ObjectToWorld, v.vertex);
+    o.ws_pos =  v.vertex;
     o.ss_pos = ComputeScreenPos(o.pos);
     o.v_col = v.v_col;
     o.light_pos = mul(_LightMatrix0, o.ws_pos);
@@ -68,7 +236,10 @@ vs_out vs_edge(vs_in v)
     else
     {   
         float outlineWidth = v.v_col.w;
-        float outline_tex = packed_channel_picker(sampler_linear_repeat, _OutlineTex, v.uv_0.xy, _OutlineWidthChannel) * _UseOutlineTex;
+        float outline_tex = 1.0f;
+        #if defined(use_outline)
+            outline_tex = packed_channel_picker(sampler_linear_repeat, _OutlineTex, v.uv_0.xy, _OutlineWidthChannel) * _UseOutlineTex;
+        #endif
         
         switch(_OutlineWidthSource * _UseOutlineTex)
         {
@@ -82,8 +253,15 @@ vs_out vs_edge(vs_in v)
                 outlineWidth = outline_tex * v.v_col.w;
                 break;
         }
-
         float3 outline_normal = (_OutlineType == 1.0) ? v.normal : v.tangent.xyz;
+        
+        #if defined(use_vat)
+            if(_VertexAnimType != 0)
+            {
+                mavuika_vat_vs(v.vertex, v.uv_1.xy, outline_normal, v.v_col.xyzw);
+            }
+        #endif
+        
         float4 wv_pos = mul(UNITY_MATRIX_MV, v.vertex);
         float3 view = _WorldSpaceCameraPos.xyz - (float3)mul(v.vertex.xyz, unity_ObjectToWorld);
         o.view = normalize(view);
@@ -241,6 +419,9 @@ shadow_out vs_shadow(shadow_in v)
 float4 ps_model(vs_out i,  bool vface : SV_ISFRONTFACE) : SV_TARGET
 {
     UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(i);
+
+    // get the world space position now, might be more expensive here but concerving vertex outputs
+    float4 ws_pos = mul(unity_ObjectToWorld, i.ws_pos);
     // FUTURE PROOFING :
     float cockType = _StarCockType;
     float cockEnabled = _StarCloakEnable;
@@ -256,7 +437,7 @@ float4 ps_model(vs_out i,  bool vface : SV_ISFRONTFACE) : SV_TARGET
         specular_enabled = 1;
     }
     // GET LIGHT ATTENUATION FOR BOTH PASSES : 
-    UNITY_LIGHT_ATTENUATION(atten, i, i.ws_pos.xyz);
+    UNITY_LIGHT_ATTENUATION(atten, i, ws_pos.xyz);
 
     // INITIALIZE PIXEL SHADER OUTPUT: 
     float4 out_color = (float4)1.0f; 
@@ -282,6 +463,81 @@ float4 ps_model(vs_out i,  bool vface : SV_ISFRONTFACE) : SV_TARGET
     #endif
 
     #ifdef _IS_PASS_BASE // Basic character shading pass, should only include the basic enviro light stuff + debug rendering shit
+        // do the vat stuff first so it can be returned as soon as possible
+        #if defined(use_vat)
+        if(_VertexAnimType == 1)
+        {
+            if(_MainTexAlphaUse == 1) clip(diffuse.w - _MainTexAlphaCutoff);
+            mavuika_vat_ps(diffuse, i.uv_a, normal, view, i.v_col);
+            return diffuse;
+        }
+        else if(_VertexAnimType==2)
+        {
+            float4 u_xlat0;
+            float3 u_xlat10_0;
+            bool u_xlatb0;
+            float4 u_xlat1;
+            float3 u_xlat10_1;
+            float3 u_xlat16_2;
+            float3 u_xlat16_3;
+            float2 u_xlat4;
+            float u_xlat16_4;
+            float u_xlat12;
+            float u_xlat16_14;
+
+            float vertical_fade = (i.uv_a.y + (-_VerticalFadeOffset)) / _VerticalFadeRange;
+            vertical_fade = saturate(vertical_fade);
+            vertical_fade = -vertical_fade + 1.0f;
+
+            if((_VerticalFadeToggle && _EnableDithering) && (vertical_fade < 0.95f))
+            {
+                ditherClip(i.ss_pos.xy/i.ss_pos.z, vertical_fade);
+            }
+
+            u_xlat0.x = i.uv_a.y;
+            u_xlat0.y = 0.5;
+            u_xlat10_1.xyz = _VerticalRampTex.Sample(sampler_linear_clamp, u_xlat0.xy).xyz;
+            u_xlat10_0.xyz = _VerticalRampTex2.Sample(sampler_linear_clamp, u_xlat0.xy).xyz;
+            u_xlat16_2.xyz = (-u_xlat10_1.xyz) + u_xlat10_0.xyz;
+            u_xlat16_2.xyz = _VerticalRampLerp * u_xlat16_2.xyz + u_xlat10_1.xyz;
+            u_xlat16_3.xyz = u_xlat16_2.xyz * _VerticalRampTint.xyz;
+            u_xlat0.xy = i.uv_a.yx * _HighlightMaskTex_ST.yx + _HighlightMaskTex_ST.wz;
+            u_xlat0 = _HighlightMaskTex.Sample(sampler_linear_repeat, u_xlat0.xy);
+            u_xlat16_14 = (_HighlightMaskTexChannelSwitch == 3) ? u_xlat0.w : 0.0;
+            u_xlat16_14 = (_HighlightMaskTexChannelSwitch == 2) ? u_xlat0.z : u_xlat16_14;
+            u_xlat16_14 = (_HighlightMaskTexChannelSwitch == 1) ? u_xlat0.y : u_xlat16_14;
+            u_xlat16_14 = (_HighlightMaskTexChannelSwitch == 0) ? u_xlat0.x : u_xlat16_14;
+            u_xlat16_2.xyz = (-u_xlat16_2.xyz) * _VerticalRampTint.xyz + _HighlightColor.xyz;
+            u_xlat16_2.xyz = u_xlat16_14 * u_xlat16_2.xyz + u_xlat16_3.xyz;
+            u_xlat0.xy = i.uv_a.xy * _HighlightMaskTex2_ST.xy + _HighlightMaskTex2_ST.zw;
+
+            u_xlat12 = _HighlightMaskTex2VOffsetByVerColA ? i.v_col.w : float(0.0);
+            u_xlat0.z = u_xlat12 + u_xlat0.x;
+            u_xlat0 = _HighlightMaskTex2.Sample(sampler_linear_repeat, u_xlat0.yz);
+            u_xlat16_14 = (_HighlightMaskTex2ChannelSwitch == 3) ? u_xlat0.w : 0.0;
+            u_xlat16_14 = (_HighlightMaskTex2ChannelSwitch == 2) ? u_xlat0.z : u_xlat16_14;
+            u_xlat16_14 = (_HighlightMaskTex2ChannelSwitch == 1) ? u_xlat0.y : u_xlat16_14;
+            u_xlat16_14 = (_HighlightMaskTex2ChannelSwitch == 0) ? u_xlat0.x : u_xlat16_14;
+            u_xlat16_3.xyz = (-u_xlat16_2.xyz) + _HighlightColor2.xyz;
+            u_xlat16_2.xyz = u_xlat16_14 * u_xlat16_3.xyz + u_xlat16_2.xyz;
+            u_xlat16_2.xyz = u_xlat16_2.xyz * _Color.xyz;
+            u_xlat16_2.xyz = u_xlat16_2.xyz * _DayColor.xyz;
+            u_xlat16_14 = max(u_xlat16_2.z, u_xlat16_2.y);
+            u_xlat16_14 = max(u_xlat16_14, u_xlat16_2.x);
+
+            u_xlatb0 = 1.0<u_xlat16_14;
+
+            u_xlat16_3.x = float(1.0) / float(u_xlat16_14);
+            u_xlat16_3.xyz = u_xlat16_2.xyz * u_xlat16_3.xxx;
+            u_xlat16_4 = u_xlat16_14 * 0.0500000007;
+
+            u_xlat16_4 = clamp(u_xlat16_4, 0.0, 1.0);
+
+            u_xlat4.x = sqrt(u_xlat16_4);
+            float3 color = (bool(u_xlatb0)) ? u_xlat16_3.xyz : u_xlat16_2.xyz;
+            return float4(color, (_VerticalFadeToggle?vertical_fade:1));
+        }
+        #endif
         float2 metalspec;
         metalspec.x = lightmap.x < 0.50f;
         metalspec.y = lightmap.x < 0.90f; // if metal area
@@ -292,7 +548,7 @@ float4 ps_model(vs_out i,  bool vface : SV_ISFRONTFACE) : SV_TARGET
 
         // adding support for new normal mapping boolean
         #if defined(use_bump)
-            if(bump_enable || isMainNormal) normal = normal_mapping(normalmap, _gameVersion == 1 ? i.n_view : i.ws_pos, uv_a, normal);
+            if(bump_enable || isMainNormal) normal = normal_mapping(normalmap, _gameVersion == 1 ? i.n_view : ws_pos, uv_a, normal);
         #if defined(sdf_line)
             if((bump_enable || isMainNormal) && _TextureLineUse && ((_TextureLineMultiplier.x + _TextureLineMultiplier.y + _TextureLineMultiplier.z) > 0)) detail_line(i.ss_pos.zw, normalmap.z, diffuse.xyz);
         #endif
@@ -432,7 +688,7 @@ float4 ps_model(vs_out i,  bool vface : SV_ISFRONTFACE) : SV_TARGET
 
         #if defined(use_leather)
             // override the color with the leather if needed
-            if(_UseCharacterLeather && (material_id == 5)  && _UseMaterial5) leather_color(ndoth, normal, light, lightmap.z, leather, holographic, out_color.xyz);
+            if(_UseCharacterLeather ) leather_color(ndoth, normal, light, lightmap.z, leather, holographic, out_color.xyz);
         #endif
 
         out_color.xyz = out_color.xyz * s_color + (spec_color);
@@ -460,9 +716,9 @@ float4 ps_model(vs_out i,  bool vface : SV_ISFRONTFACE) : SV_TARGET
         #if defined(parallax_glass)
             if(_UseGlassSpecularToggle) glass_color(out_color, i.uv_a, view, normal);
         #endif
-        #if defined(nyx_body)
+        // #if defined(nyx_body)
             if(_EnableNyxBody && _BodyAffected) nyx_state_marking(out_color.xyz, uv_a.xy, i.uv_a.zw, uv_b.xy, uv_b.zw, normal, view, i.ss_pos);
-        #endif
+        // #endif
         // Apply scene light color, only taking the main directional light color * ambient color settings
         out_color.xyz = out_color.xyz * light_color;
         
@@ -474,9 +730,13 @@ float4 ps_model(vs_out i,  bool vface : SV_ISFRONTFACE) : SV_TARGET
         out_color.xyz = lerp(out_color.xyz, emis_color, ((mask * emis_color.w) * emis_check));
         out_color.xyz = lerp(out_color.xyz, emis_color_eye, (eye_mask * emis_check_eye) * emis_color_eye.w);
         
-        #if defined(nyx_body)
+        // #if defined(nyx_body)
             if(_EnableNyxBody && !_BodyAffected) nyx_state_marking(out_color.xyz, uv_a.xy, i.uv_a.zw, uv_b.xy, uv_b.zw, normal, view, i.ss_pos);
-        #endif
+        // #endif
+
+        if(_UseFakePoint) out_color.xyz = fakePointLight(i.ws_pos.xyz, lightmap.w, out_color.xyz, _FakePointReflection, _FakePointFrequency, _FakePointFrequencyMin, _FakePointPosition, _FakePointColor, _FakePointRange, _FakePointSkinIntensity, _FakePointIntensity, _FakePointSkinSaturate);
+        if(_UseFakePoint2) out_color.xyz = fakePointLight(i.ws_pos.xyz, lightmap.w, out_color.xyz, _FakePointReflection2, _FakePointFrequency2, _FakePointFrequencyMin2, _FakePointPosition2, _FakePointColor2, _FakePointRange2, _FakePointSkinIntensity2, _FakePointIntensity2, _FakePointSkinSaturate2);
+        if(_UseFakePoint3) out_color.xyz = fakePointLight(i.ws_pos.xyz, lightmap.w, out_color.xyz, _FakePointReflection3, _FakePointFrequency3, _FakePointFrequencyMin3, _FakePointPosition3, _FakePointColor3, _FakePointRange3, _FakePointSkinIntensity3, _FakePointIntensity3, _FakePointSkinSaturate3);
         // Rim light moved to last thing done to the model so to ensure that all parts get it
         // previous versions it was added to the color before certain things and they didnt recieve any rim lights as a result
         // most notably was the star cock shit when set to be emissive
@@ -484,7 +744,7 @@ float4 ps_model(vs_out i,  bool vface : SV_ISFRONTFACE) : SV_TARGET
         #if defined(use_rimlight)
             if(_UseRimLight) 
             {
-                rim_light = rimlighting(i.ss_pos, normal, i.ws_pos, light, material_id, out_color.xyz, view);
+                rim_light = rimlighting(i.ss_pos, normal, ws_pos, light, material_id, out_color.xyz, view);
                 #if defined(can_shift)
                     if(_EnableRimHue) rim_light.xyz = hue_shift(rim_light.xyz, material_id, _RimHue, _RimHue2, _RimHue3, _RimHue4, _RimHue5, _GlobalRimHue, _AutomaticRimShift, _ShiftRimSpeed, rim_mask);
                 #endif
@@ -493,7 +753,11 @@ float4 ps_model(vs_out i,  bool vface : SV_ISFRONTFACE) : SV_TARGET
         #endif
         
         // basic ass transparency
-        if(_MainTexAlphaUse == 4) out_color.w = diffuse.w;      
+        if(_MainTexAlphaUse == 4)
+        {
+            out_color.w = diffuse.w;      
+            if(_EnableDithering) ditherClip(ws_pos.xy, out_color.w);
+        }
         #if defined(can_debug)  
             if(_DebugMode) // debuuuuuug
             {
@@ -573,7 +837,7 @@ float4 ps_model(vs_out i,  bool vface : SV_ISFRONTFACE) : SV_TARGET
     #ifdef _IS_PASS_LIGHT // Lighting shading pass, should only include the necessary lighting things needed
         if(_UseFaceMapNew) normal = float3(0.5f, 0.5f, 1.0f);
         #if defined(POINT) || defined(SPOT)
-        light = normalize(_WorldSpaceLightPos0.xyz - i.ws_pos.xyz);
+        light = normalize(_WorldSpaceLightPos0.xyz - ws_pos.xyz);
         #endif
         
         // MATERIAL ID: 
@@ -601,7 +865,7 @@ float4 ps_model(vs_out i,  bool vface : SV_ISFRONTFACE) : SV_TARGET
         #endif
         
     #endif
-    if(_UseWeapon) weapon_shit(out_color.xyz, diffuse.w, i.uv_a.zw, normal, view, i.ws_pos);
+    if(_UseWeapon) weapon_shit(out_color.xyz, diffuse.w, i.uv_a.zw, normal, view, ws_pos);
     return out_color; 
 }
 
@@ -660,56 +924,67 @@ float4 ps_edge(vs_out i, bool vface : SV_ISFRONTFACE) : SV_TARGET
 float4 ps_nyx(vs_out i, bool vface : SV_ISFRONTFACE) : SV_TARGET
 {
     #if defined(nyx_outline)
-        // calculate lighting colors
-        float3 normal = normalize(i.normal);
-        float3 ambient_color = max(half3(0.05f, 0.05f, 0.05f), max(ShadeSH9(half4(0.0, 0.0, 0.0, 1.0)),ShadeSH9(half4(0.0, -1.0, 0.0, 1.0)).rgb));
-        float3 light_color = max(ambient_color, _LightColor0.rgb);
-        float3 GI_color = DecodeLightProbe(normal);
-        GI_color = GI_color < float3(1,1,1) ? GI_color : float3(1,1,1);
-        float GI_intensity = 0.299f * GI_color.r + 0.587f * GI_color.g + 0.114f * GI_color.b;
-        GI_intensity = GI_intensity < 1 ? GI_intensity : 1.0f;
-        float3 gi = (GI_color * GI_intensity * _GI_Intensity * smoothstep(1.0f ,0.0f, GI_intensity / 2.0f));
+        if(_EnableNyxOutline)
+        {
+            // calculate lighting colors
+            float3 normal = normalize(i.normal);
+            float3 ambient_color = max(half3(0.05f, 0.05f, 0.05f), max(ShadeSH9(half4(0.0, 0.0, 0.0, 1.0)),ShadeSH9(half4(0.0, -1.0, 0.0, 1.0)).rgb));
+            float3 light_color = max(ambient_color, _LightColor0.rgb);
+            float3 GI_color = DecodeLightProbe(normal);
+            GI_color = GI_color < float3(1,1,1) ? GI_color : float3(1,1,1);
+            float GI_intensity = 0.299f * GI_color.r + 0.587f * GI_color.g + 0.114f * GI_color.b;
+            GI_intensity = GI_intensity < 1 ? GI_intensity : 1.0f;
+            float3 gi = (GI_color * GI_intensity * _GI_Intensity * smoothstep(1.0f ,0.0f, GI_intensity / 2.0f));
 
-        // initialize output color
-        float4 color = (float4)1.0f;
-        // handle alpha
-        float alpha = _MainTex.Sample(sampler_MainTex, i.uv_a.xy).w;
-        if(_MainTexAlphaUse == 0) alpha = 1.0f;
-        if(_MainTexAlphaUse == 1) clip(alpha - _MainTexAlphaCutoff);
-        if(_MainTexAlphaUse == 4) color.w = alpha;
+            // initialize output color
+            float4 color = (float4)1.0f;
+            // handle alpha
+            float alpha = _MainTex.Sample(sampler_MainTex, i.uv_a.xy).w;
+            if(_MainTexAlphaUse == 0) alpha = 1.0f;
+            if(_MainTexAlphaUse == 1) clip(alpha - _MainTexAlphaCutoff);
+            if(_MainTexAlphaUse == 4) color.w = alpha;
 
-        // this is basically the same code as the body nyx stuff
-        // create the screen space uv for the noise to sampled from
-        float4 screen_uv;
-        screen_uv = ((i.ss_pos.xyxy / i.ss_pos.wwww) * _ScreenParams.xyxy) / _ScreenParams.xxxx;
-        screen_uv.yw = 1.0f - screen_uv.yw;
-        float4 noise_uv = _Time.yyyy * (_NyxStateOutlineColorNoiseAnim.zwxy);
-        noise_uv = frac(noise_uv);
-        screen_uv = screen_uv * _NyxStateOutlineColorNoiseScale.xyxy + noise_uv;
-        float noise_a = _NyxStateOutlineNoise.Sample(sampler_linear_repeat, screen_uv.xy).x;
-        screen_uv.xy = noise_a.xx * (float2)_NyxStateOutlineColorNoiseTurbulence + screen_uv.zw;
-        float2 ramp_uv;
-        float2 time_uv;
-        ramp_uv.x = _NyxStateOutlineNoise.Sample(sampler_linear_repeat, screen_uv.xy).x;
-        ramp_uv.y = float(0.75);
-        time_uv.y = float(0.25);
-        float3 nyx_ramp = _NyxStateOutlineColorRamp.Sample(sampler_linear_repeat, ramp_uv.xy, 0.0).xyz;
-        time_uv.x = (_DayOrNight) ? 0 : 1;
-        float3 time_ramp = _NyxStateOutlineColorRamp.Sample(sampler_linear_repeat, time_uv.xy, 0.0).xyz;
-        nyx_ramp.xyz = time_ramp.xyz * nyx_ramp.xyz;
-        nyx_ramp.xyz = nyx_ramp.xyz * (float3)_NyxStateOutlineColorScale * _NyxStateOutlineColor;
-        float nyx_brightness = max(nyx_ramp.z, nyx_ramp.y);
-        nyx_brightness = max(nyx_ramp.x, nyx_brightness);
-        float bright_check = 1.0f < nyx_brightness;
-        color.xyz = bright_check ? (nyx_ramp * (1.0f / nyx_brightness)) : nyx_ramp;
+            // this is basically the same code as the body nyx stuff
+            // create the screen space uv for the noise to sampled from
+            float4 screen_uv;
+            screen_uv = ((i.ss_pos.xyxy / i.ss_pos.wwww) * _ScreenParams.xyxy) / _ScreenParams.xxxx;
+            screen_uv.yw = 1.0f - screen_uv.yw;
+            float4 noise_uv = _Time.yyyy * (_NyxStateOutlineColorNoiseAnim.zwxy);
+            noise_uv = frac(noise_uv);
+            screen_uv = screen_uv * _NyxStateOutlineColorNoiseScale.xyxy + noise_uv;
+            float noise_a = _NyxStateOutlineNoise.Sample(sampler_linear_repeat, screen_uv.xy).x;
+            screen_uv.xy = noise_a.xx * (float2)_NyxStateOutlineColorNoiseTurbulence + screen_uv.zw;
+            float2 ramp_uv;
+            float2 time_uv;
+            ramp_uv.x = _NyxStateOutlineNoise.Sample(sampler_linear_repeat, screen_uv.xy).x;
+            ramp_uv.y = float(0.75);
+            time_uv.y = float(0.25);
+            float3 nyx_ramp = _NyxStateOutlineColorRamp.Sample(sampler_linear_repeat, ramp_uv.xy, 0.0).xyz;
+            time_uv.x = (_DayOrNight) ? 0 : 1;
+            float3 time_ramp = _NyxStateOutlineColorRamp.Sample(sampler_linear_repeat, time_uv.xy, 0.0).xyz;
+            nyx_ramp.xyz = time_ramp.xyz * nyx_ramp.xyz;
+            nyx_ramp.xyz = nyx_ramp.xyz * (float3)_NyxStateOutlineColorScale * _NyxStateOutlineColor;
+            if(_NyxStateRampType == 1) 
+            {
+                nyx_ramp = custom_ramp_color(ramp_uv.x);
+            }
+            float nyx_brightness = max(nyx_ramp.z, nyx_ramp.y);
+            nyx_brightness = max(nyx_ramp.x, nyx_brightness);
+            float bright_check = 1.0f < nyx_brightness;
+            color.xyz = bright_check ? (nyx_ramp * (1.0f / nyx_brightness)) : nyx_ramp;
 
 
-        // depending on user choice, apply outside sources of lighting
-        if(_LineAffected) color.xyz = color.xyz * light_color + gi;
-        // if disabled, all pixels are clipped, this is to catch any weird issues with the nyx mode shader feature
-        if(!_EnableNyxOutline) clip(-1);
-        // color.xyz = nyx_noise;
-        return color;
+            // depending on user choice, apply outside sources of lighting
+            if(_LineAffected) color.xyz = color.xyz * light_color + gi;
+            // if disabled, all pixels are clipped, this is to catch any weird issues with the nyx mode shader feature
+            if(!_EnableNyxOutline) clip(-1);
+            // color.xyz = nyx_noise;
+            return color;
+        }
+        else
+        {
+            clip(-1);
+        }
     #else // if nyx mode is disabled, all pixels from this pass should be discarded
         clip(-1);
     #endif

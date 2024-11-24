@@ -73,6 +73,30 @@ Texture2D _ClipAlphaTex;
 #if defined(use_outline)
     Texture2D _OutlineTex;
 #endif
+#if defined(use_vat)
+    Texture2D _LerpTexture;
+    float4 _LerpTextureST;
+    Texture2D _VertexTex;
+    float4 _VertexTexST;
+    Texture2D _VertTex;
+    float4 _VertTexST;
+    Texture2D _PosTex_A;
+    float4 _PosTex_A_ST;
+    Texture2D _VerticalRampTex;
+    float4 _VerticalRampTex_ST;
+    Texture2D _VerticalRampTex2;
+    float4 _VerticalRampTex2_ST;
+    Texture2D _HighlightMaskTex;
+    float4 _HighlightMaskTex_ST;
+    Texture2D _HighlightMaskTex2;
+    float4 _HighlightMaskTex2_ST;
+#endif
+
+Texture2D _FakePointNoiseTex;
+Texture2D _FakePointNoiseTex2;
+Texture2D _FakePointNoiseTex3;
+
+
 float4 _MainTex_ST; // scale and translation offsets for main texture
 float4 _Star02Tex_ST;
 float4 _NoiseTex01_ST;
@@ -94,6 +118,8 @@ float4 _ScanPatternTex_ST;
 SamplerState sampler_MainTex; 
 SamplerState sampler_linear_repeat;
 SamplerState sampler_linear_clamp;
+SamplerState sampler_point_repeat;
+SamplerState sampler_point_clamp;
 // reduce sampler count to just 3
 
 
@@ -111,6 +137,7 @@ float _UseMaterial2;
 float _UseMaterial3;
 float _UseMaterial4;
 float _UseMaterial5;
+float _EnableDithering;
 
 // light: 
 float _FilterLight;
@@ -334,6 +361,7 @@ float _HitColorScaler;
 float _HitColorFresnelPower;
 
 // nyx state properties
+float _NyxStateRampType;
 float _EnableNyxState;
 float _EnableNyxBody;
 float _EnableNyxOutline;
@@ -359,9 +387,21 @@ float _NyxStateOutlineVertAnimScale;
 float _NyxStateEnableOutlineVertAnimScaleHeightLerp;
 float2 _NyxStateOutlineVertAnimScaleRange;
 float4 _NyxStateOutlineVertAnimScaleLerpHeightRange;
+// custom nyx ramp settings
+float4 _RampPoint0;
+float _RampPointPos0;
+float4 _RampPoint1;
+float _RampPointPos1;
+float4 _RampPoint2;
+float _RampPointPos2;
+// float4 _RampPoint3;
+// float _RampPointPos3;
+// float4 _RampPoint4;
+// float _RampPointPos4;
 
 // outline properties 
 float  _OutlineType;
+float _OutlineOffsetBlockBChannel;
 float _UseOutlineTex;
 float _OutlineWidthChannel;
 float _OutlineWidthSource;
@@ -439,7 +479,7 @@ float4 _NoiseSpeed;
 // asmoday arm
 float _HandEffectEnable;
 float4 _LineColor;
-float4 _LightColor;
+// float4 _LightColor;
 float4 _ShadowColor;
 float _DownMaskRange;
 float _TopMaskRange;
@@ -535,6 +575,110 @@ float _DebugEmission;
 float _DebugFaceVector;
 float _DebugMaterialIDs;
 float _DebugLights;
+
+// mavuika vat shit
+float _DisappearByVerColAlpha;
+float _VertexAnimType;
+float _EnableHairVat;
+float _EnableHairVertexVat;
+float _UseVAT;
+float4 _LightColor;
+float4 _DarkColor;
+float4 _HighlightsColor;
+float4 _AhomoColor;
+float _VertTexSwitch;
+float _VertTexUS;
+float _VertTexVS;
+float _VertAdd;
+float _VertPower;
+float _VertMask;
+float _VertexTexSwitch;
+float _VertexTexUS;
+float _VertexTexVS;
+float _VertexAdd;
+float _VertexPower;
+float _VertexMask;
+float _NoisePowerForLerpTex;
+float _HighlightsBrightness;
+float _HighlightsSpeed;
+float4 _AllColorBrightness;
+float4 _DayColor;
+float _Speed;
+float _IfAutoPlayback;
+float _CurrentFrame;
+float _FrameCount;
+float _HoudiniFPS;
+float _IfInterframeInterp;
+float _BoundMaxX;
+float _BoundMaxY;
+float _BoundMaxZ;
+float _BoundMinX;
+float _BoundMinY;
+float _BoundMinZ;
+float4 _FRESC;
+float _FresR;
+float _FresS;
+float _RempLerp;
+float _MR;
+float _MS;
+float _MainSwitch;
+float2 _AlphaNoiseSpeed;
+float _AlphaNoiseScale;
+float2 _MainUVSpeed;
+float4 _MCOLOR;
+float4 _DC;
+float4 _BC;
+float _R;
+float _S;
+float4 _RampBrightColor;
+float4 _RampDarkColor;
+float _RampR;
+float _RampS;
+float4 _HighlightColor;
+float4 _HighlightColor2;
+float _HighlightMaskTexChannelSwitch;
+float _HighlightMaskTex2ChannelSwitch;
+float _HighlightMaskTex2VOffsetByVerColA;
+
+float _VerticalRampLerp;
+float4 _VerticalRampTint;
+float _VerticalFadeToggle;
+float _VerticalFadeOffset;
+float _VerticalFadeRange;
+
+
+float4 _FakePointColor;
+float4 _FakePointPosition;
+float _UseFakePoint;
+float _FakePointRange;
+float _FakePointIntensity;
+float _FakePointReflection;
+float _FakePointFrequency;
+float _FakePointFrequencyMin;
+float _FakePointSkinIntensity;
+float _FakePointSkinSaturate;
+
+float4 _FakePointColor2;
+float4 _FakePointPosition2;
+float _UseFakePoint2;
+float _FakePointRange2;
+float _FakePointIntensity2;
+float _FakePointReflection2;
+float _FakePointFrequency2;
+float _FakePointFrequencyMin2;
+float _FakePointSkinIntensity2;
+float _FakePointSkinSaturate2;
+
+float4 _FakePointColor3;
+float4 _FakePointPosition3;
+float _UseFakePoint3;
+float _FakePointRange3;
+float _FakePointIntensity3;
+float _FakePointReflection3;
+float _FakePointFrequency3;
+float _FakePointFrequencyMin3;
+float _FakePointSkinIntensity3;
+float _FakePointSkinSaturate3;
 
 uniform float _GI_Intensity;
 uniform float4x4 _LightMatrix0;

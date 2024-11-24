@@ -12,6 +12,31 @@ float materialID(float alpha)
     return material;
 }
 
+float isDithered(float2 pos, float alpha) 
+{
+    pos *= _ScreenParams.xy;
+
+    // Define a dither threshold matrix which can
+    // be used to define how a 4x4 set of pixels
+    // will be dithered
+    float DITHER_THRESHOLDS[16] =
+    {
+        1.0 / 17.0,  9.0 / 17.0,  3.0 / 17.0, 11.0 / 17.0,
+        13.0 / 17.0,  5.0 / 17.0, 15.0 / 17.0,  7.0 / 17.0,
+        4.0 / 17.0, 12.0 / 17.0,  2.0 / 17.0, 10.0 / 17.0,
+        16.0 / 17.0,  8.0 / 17.0, 14.0 / 17.0,  6.0 / 17.0
+    };
+
+    int index = (int(pos.x) % 4) * 4 + int(pos.y) % 4;
+    return alpha - DITHER_THRESHOLDS[index];
+}
+
+void ditherClip(float2 pos, float alpha)
+{
+    clip(isDithered(pos, alpha));
+}
+
+
 // from: https://github.com/cnlohr/shadertrixx/blob/main/README.md#best-practice-for-getting-depth-of-a-given-pixel-from-the-depth-texture
 float GetLinearZFromZDepth_WorksWithMirrors(float zDepthFromMap, float2 screenUV)
 {
@@ -524,7 +549,7 @@ void glass_color(inout float4 color, in float4 uv, in float3 view, in float3 nor
 
         float detail_length = (uv.w + (-_GlassSpecularDetailLength)) / max(_GlassSpecularDetailLengthRange, 0.0001f);
         detail_length = saturate(detail_length);
-        float detail = (detail_length * shine_b) * _GlassSpecularDetailColor;
+        float3 detail = (detail_length * shine_b) * _GlassSpecularDetailColor ;
 
         float specular_length = (uv.w + (-_GlasspecularLength)) / max(_GlasspecularLengthRange, 0.0001f);
         specular_length = saturate(specular_length);
@@ -593,6 +618,22 @@ float3 outline_emission(in float3 color, in float material_id)
     return emission;
 }
 
+float3 custom_ramp_color(float ramp)
+{
+    float3 color = _RampPoint0.xyz;
+    if(ramp < 0.45f)
+    {
+        ramp = smoothstep(0.0f, 0.45f, ramp);
+        color = lerp(_RampPoint0.xyz, _RampPoint1.xyz, ramp);
+    }
+    else
+    {
+        ramp = smoothstep(0.45f, 1.0f, ramp);
+        color = lerp(_RampPoint1.xyz, _RampPoint2.xyz, ramp);
+    }
+    return color;
+}
+
 void nyx_state_marking(inout float3 color, in float2 uv0, in float2 uv1, in float2 uv2, in float2 uv3, in float3 normal, in float3 view, in float4 ws_pos)
 {
     #if defined(nyx_body)
@@ -623,6 +664,10 @@ void nyx_state_marking(inout float3 color, in float2 uv0, in float2 uv1, in floa
         float3 nyx_ramp = _NyxStateOutlineColorRamp.Sample(sampler_linear_repeat, ramp_uv.xy, 0.0).xyz;
         time_uv.x = (_DayOrNight) ? 0 : 1;
         float3 time_ramp = _NyxStateOutlineColorRamp.Sample(sampler_linear_repeat, time_uv.xy, 0.0).xyz;
+        if(_NyxStateRampType == 1) 
+        {
+            nyx_ramp = custom_ramp_color(ramp_uv.x);
+        }
 
         float nyx_brightness = max(nyx_ramp.z, nyx_ramp.y);
         nyx_brightness = max(nyx_ramp.x, nyx_brightness);
@@ -698,7 +743,7 @@ float3 rimlighting(float4 sspos, float3 normal, float4 wspos, float3 light, floa
             float camera_depth = saturate(1.0f - ((camera_pos.z / camera_pos.w) / 5.0f));
 
             float3 offset = (_UseFaceMapNew) ?  mul(unity_WorldToCamera, wspos).xyz :  mul((float3x3)unity_WorldToCamera, normal);
-            offset.z = (_UseFaceMapNew) ? -0.01 : 0.001f;
+            offset.z = (_UseFaceMapNew) ? -0.01 : 0.01f;
             offset = normalize(offset);
             float depth_og = GetLinearZFromZDepth_WorksWithMirrors(SAMPLE_DEPTH_TEXTURE(_CameraDepthTexture, screen_pos), screen_pos);
 
@@ -726,24 +771,24 @@ float3 rimlighting(float4 sspos, float3 normal, float4 wspos, float3 light, floa
             depth_diff = saturate(depth_diff);
 
             
-            float3 rim_vector = normalize(view + _WorldSpaceLightPos0.xyz);
+            float3 rim_vector = normalize(view + -_WorldSpaceLightPos0.xyz);
 
             float3 front_rim = 1.0f -  dot(normal, rim_vector);
-            rim_vector = normalize(view + float3(-_WorldSpaceLightPos0.xy, _WorldSpaceLightPos0.z));
-            float3 back_rim = 1.0f - dot(normal, rim_vector);
-            back_rim = pow(back_rim, 3.0f);
-            front_rim = pow(front_rim, 3.0f);
+            float3 back_rim = dot(normal, rim_vector);
+            back_rim = pow(back_rim, 7.5f);
+            front_rim = pow(front_rim, 7.5f);
             front_rim = saturate(front_rim);
             back_rim = saturate(back_rim);
             
-            back_rim = back_rim * (_ES_AvatarBackRimIntensity * _ES_AvatarBackRimColor);
-            front_rim = (_ES_AvatarFrontRimIntensity * _ES_AvatarFrontRimColor) * front_rim + back_rim;
+            back_rim = (back_rim * (_ES_AvatarBackRimIntensity * (_ES_AvatarBackRimColor)));
+            front_rim = ((((_ES_AvatarFrontRimIntensity * (_ES_AvatarFrontRimColor)) * front_rim ) + back_rim));
                         
-            float3 rim_color = color * 5.0f + 0.3f;
-            rim_color = saturate(rim_color);
+            float3 rim_color = color * 5.0f;
+            rim_color = (rim_color) * saturate(_LightColor0.xyz + 0.1f);
             
             rim_light = front_rim * rim_color;
             rim_light = rim_light * depth_diff;
+            rim_light = saturate(rim_light * camera_depth);
         }
         else // legacy rim light mode, based on implementation as of 1.5
         {
@@ -826,6 +871,37 @@ float3 rimlighting(float4 sspos, float3 normal, float4 wspos, float3 light, floa
 
     
     return rim_light;
+}
+
+float3 fakePointLight(float3 worldPos, float matIDTex, float3 out_color,
+        float3 fake_ref, float fake_freq, float freq_min, float3 fake_pos, float3 fake_col,
+        float fake_range, float skin_int, float fake_int, float skin_sat)
+{
+    out_color = out_color * fake_ref;
+    float2 noise_uv = float2(frac(_Time.y * fake_freq), 0.0f);
+    float noise_tex = _FakePointNoiseTex.Sample(sampler_linear_repeat, noise_uv).x;
+    noise_tex = max(noise_tex, freq_min);
+
+    float3 light_pos = worldPos.xyz - fake_pos.xyz;
+    light_pos = sqrt(dot(light_pos, light_pos));
+    light_pos = light_pos + -fake_range;
+    light_pos = -light_pos * 3.33333325f + 1.0f;
+    light_pos = saturate( light_pos);
+
+    float skin_light = light_pos * skin_int;
+    float light = light_pos * fake_int;
+
+    light = (matIDTex >= 0.8f) ? skin_light : light;
+
+    float3 light_color = dot(fake_col, float3(0.298999995f, 0.587000012f, 0.114f));
+    light_color = lerp(fake_col, light_color, skin_sat);
+    light_color = (matIDTex >= 0.8f) ? light_color : fake_col;
+    light_color = light_color * light;
+
+    light_color = light_color * noise_tex;
+    light_color = (out_color * light_color + light_color);
+    out_color = out_color + light_color;
+    return out_color; 
 }
 
 void weapon_shit(inout float3 diffuse_color, float diffuse_alpha, float2 uv, float3 normal, float3 view, float3 wspos)
@@ -1273,3 +1349,86 @@ void arm_effect(inout float4 diffuse, float2 uv0, float2 uv1, float2 uv2, float3
     #endif 
 }
 
+void mavuika_vat_vs(inout float4 position, inout float2 uv1, in float3 normal, in float4 color)
+{   
+    #if defined(use_vat)
+    if(_EnableHairVat)
+    {
+        float2 uv = uv1 * _VertexTexST.xy + _VertexTexST.zw;
+        uv = _Time.yy * float2(_VertexTexUS, _VertexTexVS) + uv.xy;
+        float4 noise = _VertexTex.SampleLevel(sampler_linear_repeat, uv, 0).xyzw;
+        float shift = 0.0f;
+        shift.x = _VertexTexSwitch == 3 ? noise.w : shift;
+        shift.x = _VertexTexSwitch == 2 ? noise.z : shift;
+        shift.x = _VertexTexSwitch == 1 ? noise.y : shift;
+        shift.x = _VertexTexSwitch == 0 ? noise.x : shift;
+        shift = shift + _VertexAdd;
+        shift = shift * _VertexPower;
+        float3 offset = shift * normal.xyz;
+        offset = offset * color.xxx;
+        float mask = saturate(color.z + _VertexMask);
+        offset = offset * mask;
+        position.xyz = offset.xyz + position.xyz;
+    }   
+    #endif
+}
+
+void mavuika_vat_ps(inout float4 diffuse, in float4 uv, in float3 normal, in float3 view, in float3 vcol)
+{
+    #if defined(use_vat)
+        if(_EnableHairVertexVat)
+        {
+            // set up uvs
+            float2 noise_uv = _Time.yy * float2(_VertTexUS, _VertTexVS) + (uv.zw * _VertTexST.xy + _VertTexST.zw);
+            float2 lerp_uv = uv.xy * _LerpTextureST.xy + _LerpTextureST.zw;
+            // sample noise texture
+            float4 noise = _VertTex.Sample(sampler_linear_repeat, noise_uv).xyzw;
+            float shift = 0.0f;
+            shift.x = _VertTexSwitch == 3 ? noise.w : shift;
+            shift.x = _VertTexSwitch == 2 ? noise.z : shift;
+            shift.x = _VertTexSwitch == 1 ? noise.y : shift;
+            shift.x = _VertTexSwitch == 0 ? noise.x : shift;
+            shift.x = (((shift + _VertAdd) * _VertPower)  * vcol.x) * saturate(vcol.z + _VertMask); 
+            // offset uv for blending texture using noise texture
+            lerp_uv = _NoisePowerForLerpTex.xx * shift.xx + lerp_uv.xy;
+            // sample blend texture
+            float3 blend_tex = _LerpTexture.Sample(sampler_linear_repeat, lerp_uv).xyz;
+            float3 color = lerp(_DarkColor, _LightColor, blend_tex.yyy);
+            float highlights = sin(_Time.y * _HighlightsSpeed) * _HighlightsBrightness + 1.0f;
+
+            float ndotv = dot(normal, view);
+            ndotv.x = -ndotv.x + 1.0f;
+            ndotv = max(ndotv, 0.000001f);
+            ndotv = pow(ndotv, 2.3199f);
+            ndotv = ndotv * 1.399f + 0.3f;
+            ndotv = blend_tex.z * ndotv;
+
+            float4 u_xlat16_6;
+            float4 u_xlat16_5;
+            float4 u_xlat16_0;
+            float4 u_xlat16_1;
+            
+            u_xlat16_6.xyz = _HighlightsColor.xyz * highlights + (-color.xyz);
+            u_xlat16_5.xyz = ndotv * u_xlat16_6.xyz + color.xyz;
+            u_xlat16_6.xyz = _AhomoColor.xyz * highlights + (-u_xlat16_5.xyz);
+            u_xlat16_5.xyz = blend_tex.xxx * u_xlat16_6.xyz + u_xlat16_5.xyz;
+            u_xlat16_5.xyz = u_xlat16_5.xyz * _AllColorBrightness.xyz;
+            u_xlat16_0.xyz = u_xlat16_5.xyz * _DayColor.xyz;
+            u_xlat16_5.x = max(u_xlat16_0.z, u_xlat16_0.y);
+            u_xlat16_1.w = max(u_xlat16_0.x, u_xlat16_5.x);
+
+            u_xlat16_1.xyz = u_xlat16_0.xyz / u_xlat16_1.www;
+            u_xlat16_0.w = 1.0;
+            u_xlat16_0 = (1.0<u_xlat16_1.w) ? u_xlat16_1 : u_xlat16_0;
+
+            diffuse = u_xlat16_0;
+        }
+    #endif   
+}
+
+int bitFieldInsert(int base, int insert, int start, int num)
+// the fact i had to write this function myself is stupid
+{
+    int mask = ~(0xffffffff < num) << start;
+    return (base & ~mask) | (insert << start);
+}
