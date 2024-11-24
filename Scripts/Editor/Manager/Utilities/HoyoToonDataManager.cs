@@ -17,8 +17,9 @@ namespace HoyoToon
         public static string HSRShader => GetShaderPath("HSRShader");
         public static string GIShader => GetShaderPath("GIShader");
         public static string Hi3Shader => GetShaderPath("Hi3Shader");
-        public static string Hi3P2Shader => GetShaderPath("Hi3P2Shader");
+        public static string HI3P2Shader => GetShaderPath("HI3P2Shader");
         public static string WuWaShader => GetShaderPath("WuWaShader");
+        public static string ZZZShader => GetShaderPath("ZZZShader");
 
         static HoyoToonDataManager()
         {
@@ -30,7 +31,17 @@ namespace HoyoToon
             hoyoToonData = GetHoyoToonData();
         }
 
-        public static HoyoToonData Data => hoyoToonData;
+        public static HoyoToonData Data
+        {
+            get
+            {
+                if (hoyoToonData == null)
+                {
+                    Initialize();
+                }
+                return hoyoToonData;
+            }
+        }
 
         public static HoyoToonData GetHoyoToonData()
         {
@@ -41,13 +52,15 @@ namespace HoyoToon
                     string json = client.GetStringAsync(url).Result;
                     CacheJson(json);
                     HoyoToonLogs.LogDebug("Successfully retrieved HoyoToon data from the server.");
-                    return JsonConvert.DeserializeObject<HoyoToonData>(json);
+                    hoyoToonData = JsonConvert.DeserializeObject<HoyoToonData>(json);
+                    return hoyoToonData;
                 }
             }
             catch (Exception ex)
             {
                 HoyoToonLogs.ErrorDebug($"Failed to get HoyoToon data from the server. Using cached data. Exception: {ex.Message}, StackTrace: {ex.StackTrace}");
-                return ReadFromCache();
+                hoyoToonData = ReadFromCache();
+                return hoyoToonData;
             }
         }
 
@@ -100,6 +113,7 @@ namespace HoyoToon
             public string[] NonSRGBKeywords { get; set; }
             public string[] EndsWithNonSRGBKeywords { get; set; }
             public string[] NonPower2Keywords { get; set; }
+            public string[] SRGBKeywords { get; set; }
         }
     }
 }
