@@ -18,8 +18,9 @@ namespace HoyoToon
         public static readonly string HSRShader = HoyoToonDataManager.HSRShader;
         public static readonly string GIShader = HoyoToonDataManager.GIShader;
         public static readonly string Hi3Shader = HoyoToonDataManager.Hi3Shader;
-        public static readonly string Hi3P2Shader = HoyoToonDataManager.Hi3P2Shader;
+        public static readonly string HI3P2Shader = HoyoToonDataManager.HI3P2Shader;
         public static readonly string WuWaShader = HoyoToonDataManager.WuWaShader;
+        public static readonly string ZZZShader = HoyoToonDataManager.ZZZShader;
 
         #endregion
 
@@ -30,6 +31,7 @@ namespace HoyoToon
         public static void GenerateMaterialsFromJson()
         {
             HoyoToonParseManager.DetermineBodyType();
+            HoyoToonDataManager.GetHoyoToonData();
             var textureCache = new Dictionary<string, Texture>();
             UnityEngine.Object[] selectedObjects = Selection.objects;
             List<string> loadedTexturePaths = new List<string>();
@@ -74,139 +76,24 @@ namespace HoyoToon
         {
             TextAsset jsonTextAsset = AssetDatabase.LoadAssetAtPath<TextAsset>(jsonFile);
             string jsonContent = jsonTextAsset.text;
-            JObject jsonObject = JObject.Parse(jsonContent);
+            MaterialJsonStructure materialData = JsonConvert.DeserializeObject<MaterialJsonStructure>(jsonContent);
             string jsonFileName = Path.GetFileNameWithoutExtension(jsonFile);
 
-            bool isUnrealEngine = jsonObject["Parameters"] != null;
-            bool isUnity = jsonObject["m_SavedProperties"] != null;
-
-            var shaderKeywords = HoyoToonDataManager.Data.ShaderKeywords;
-            var shaderPaths = HoyoToonDataManager.Data.Shaders;
-
-            Dictionary<string, string> shaderKeys = new Dictionary<string, string>();
-            foreach (var shader in shaderKeywords)
-            {
-                string shaderName = shader.Key;
-                foreach (var keyword in shader.Value)
-                {
-                    shaderKeys[keyword] = shaderName;
-                }
-            }
-
-            Shader shaderToApply = null;
-
-            JToken shaderToken = jsonObject["m_Shader"];
-            if (shaderToken != null && shaderToken["Name"] != null && !string.IsNullOrEmpty(shaderToken["Name"].Value<string>()))
-            {
-                shaderToApply = Shader.Find(shaderToken["Name"].Value<string>());
-                HoyoToonLogs.LogDebug($"Found shader '{shaderToken["Name"].Value<string>()}' in JSON");
-            }
-
-            if (shaderToApply == null)
-            {
-                foreach (var shaderKey in shaderKeys)
-                {
-                    bool keywordFound = false;
-
-                    // Hoyoverse Shaders
-                    if (isUnity)
-                    {
-                        JToken texEnvsToken = jsonObject["m_SavedProperties"]?["m_TexEnvs"];
-                        JToken floatsToken = jsonObject["m_SavedProperties"]?["m_Floats"];
-
-                        bool texEnvsContainsKey = texEnvsToken != null && ContainsKey(texEnvsToken, shaderKey.Key);
-                        bool floatsContainsKey = floatsToken != null && ContainsKey(floatsToken, shaderKey.Key);
-
-                        if (texEnvsContainsKey || floatsContainsKey)
-                        {
-                            keywordFound = true;
-                            HoyoToonLogs.LogDebug($"Keyword '{shaderKey.Key}' found in TexEnvs or Floats");
-
-                            if (shaderKey.Value == "Hi3Shader")
-                            {
-                                bool isPart2Shader = false;
-                                HoyoToonLogs.LogDebug("Checking Hi3P2Shader keywords...");
-                                foreach (var hi3P2Keyword in shaderKeywords["Hi3P2Shader"])
-                                {
-                                    HoyoToonLogs.LogDebug($"Checking keyword: {hi3P2Keyword}");
-                                    if ((texEnvsToken != null && ContainsKey(texEnvsToken, hi3P2Keyword)) ||
-                                        (floatsToken != null && ContainsKey(floatsToken, hi3P2Keyword)))
-                                    {
-                                        isPart2Shader = true;
-                                        HoyoToonLogs.LogDebug($"Part2 keyword '{hi3P2Keyword}' found in TexEnvs or Floats");
-                                        break;
-                                    }
-                                }
-
-                                string shaderKeyToUse = isPart2Shader ? "Hi3P2Shader" : "Hi3Shader";
-                                HoyoToonLogs.LogDebug($"Shader key to use: {shaderKeyToUse}");
-                                shaderToApply = Shader.Find(shaderPaths[shaderKeyToUse][0]);
-                                HoyoToonLogs.LogDebug($"Applying shader '{shaderPaths[shaderKeyToUse][0]}' based on Hoyoverse keyword '{shaderKey.Key}'");
-                                HoyoToonLogs.LogDebug($"Shader override: {(isPart2Shader ? "True" : "False")}");
-                            }
-                            else
-                            {
-                                shaderToApply = Shader.Find(shaderPaths[shaderKey.Value][0]);
-                                HoyoToonLogs.LogDebug($"Applying shader '{shaderPaths[shaderKey.Value][0]}' based on Hoyoverse keyword '{shaderKey.Key}'");
-                                HoyoToonLogs.LogDebug("Shader override: False");
-                            }
-                        }
-                    }
-
-                    // KuroGames Shaders
-                    if (isUnrealEngine && !keywordFound)
-                    {
-                        JToken texturesToken = jsonObject["Textures"];
-                        JToken scalarsToken = jsonObject["Parameters"]?["Scalars"];
-                        JToken switchesToken = jsonObject["Parameters"]?["Switches"];
-                        JToken parametersToken = jsonObject["Parameters"];
-
-                        bool texturesContainsKey = texturesToken != null && ContainsKey(texturesToken, shaderKey.Key);
-                        bool scalarsContainsKey = scalarsToken != null && ContainsKey(scalarsToken, shaderKey.Key);
-                        bool switchesContainsKey = switchesToken != null && ContainsKey(switchesToken, shaderKey.Key);
-                        bool parametersContainsKey = parametersToken != null && ContainsKey(parametersToken, shaderKey.Key);
-
-                        if (texturesContainsKey || scalarsContainsKey || switchesContainsKey || parametersContainsKey)
-                        {
-                            shaderToApply = Shader.Find(shaderPaths[shaderKey.Value][0]);
-                            HoyoToonLogs.LogDebug($"Applying shader '{shaderPaths[shaderKey.Value][0]}' based on KuroGames keyword '{shaderKey.Key}'");
-                            break;
-                        }
-                    }
-
-                    if (shaderToApply != null)
-                    {
-                        break;
-                    }
-                }
-            }
+            Shader shaderToApply = DetermineShader(materialData);
 
             if (shaderToApply != null)
             {
                 HoyoToonLogs.LogDebug($"Final shader to apply: {shaderToApply.name}");
                 string materialPath = Path.GetDirectoryName(jsonFile) + "/" + jsonFileName + ".mat";
-                Material existingMaterial = AssetDatabase.LoadAssetAtPath<Material>(materialPath);
-                Material materialToUpdate;
+                Material materialToUpdate = GetOrCreateMaterial(materialPath, shaderToApply, jsonFileName);
 
-                if (existingMaterial != null)
+                if (materialData.IsUnityFormat)
                 {
-                    materialToUpdate = existingMaterial;
-                    materialToUpdate.shader = shaderToApply;
+                    ProcessUnityMaterialProperties(materialData, materialToUpdate, textureCache, loadedTexturePaths, shaderToApply);
                 }
-                else
+                else if (materialData.IsUnrealFormat)
                 {
-                    materialToUpdate = new Material(shaderToApply);
-                    materialToUpdate.name = jsonFileName;
-                    AssetDatabase.CreateAsset(materialToUpdate, materialPath);
-                }
-
-                if (isUnity)
-                {
-                    ProcessUnityMaterialProperties(jsonObject, materialToUpdate, textureCache, loadedTexturePaths, shaderToApply);
-                }
-                else if (isUnrealEngine)
-                {
-                    ProcessUnrealMaterialProperties(jsonObject, materialToUpdate, textureCache, loadedTexturePaths);
+                    ProcessUnrealMaterialProperties(materialData, materialToUpdate, textureCache, loadedTexturePaths);
                 }
 
                 HoyoToonTextureManager.SetTextureImportSettings(loadedTexturePaths);
@@ -215,229 +102,201 @@ namespace HoyoToon
                 EditorUtility.SetDirty(materialToUpdate);
                 AssetDatabase.SaveAssets();
                 AssetDatabase.Refresh();
-                ApplyScriptedSettingsToMaterial(materialToUpdate, jsonFileName, jsonFile, jsonObject);
+                ApplyScriptedSettingsToMaterial(materialToUpdate, jsonFileName, jsonFile, JObject.Parse(jsonContent));
             }
             else
             {
-                EditorUtility.DisplayDialog("Error", $"No compatible shader found for " + jsonFileName, "OK");
+                EditorUtility.DisplayDialog("Error", $"No compatible shader found for {jsonFileName}. Generation shall continue.", "OK");
                 HoyoToonLogs.ErrorDebug("No compatible shader found for " + jsonFileName);
             }
         }
 
-        private static void ProcessProperties(JToken token, Material material, Action<string, JToken> action)
+        private static Material GetOrCreateMaterial(string materialPath, Shader shader, string materialName)
         {
-            if (token is JArray array)
+            Material existingMaterial = AssetDatabase.LoadAssetAtPath<Material>(materialPath);
+            if (existingMaterial != null)
             {
-                foreach (var item in array)
+                existingMaterial.shader = shader;
+                return existingMaterial;
+            }
+
+            Material newMaterial = new Material(shader) { name = materialName };
+            AssetDatabase.CreateAsset(newMaterial, materialPath);
+            return newMaterial;
+        }
+
+        private static void ProcessUnityMaterialProperties(MaterialJsonStructure materialData, Material material, 
+            Dictionary<string, Texture> textureCache, List<string> loadedTexturePaths, Shader shader)
+        {
+            var properties = materialData.m_SavedProperties;
+
+            // Process floats
+            if (properties.m_Floats != null)
+            {
+                foreach (var kvp in properties.m_Floats)
                 {
-                    string propertyName = item["Key"].Value<string>();
-                    JToken propertyValue = item["Value"];
-                    action(propertyName, propertyValue);
+                    if (material.HasProperty(kvp.Key))
+                    {
+                        material.SetFloat(kvp.Key, kvp.Value);
+                    }
                 }
             }
-            else if (token is JObject obj)
+
+            // Process ints
+            if (properties.m_Ints != null)
             {
-                foreach (var item in obj)
+                foreach (var kvp in properties.m_Ints)
                 {
-                    string propertyName = item.Key;
-                    JToken propertyValue = item.Value;
-                    action(propertyName, propertyValue);
+                    if (material.HasProperty(kvp.Key))
+                    {
+                        material.SetInt(kvp.Key, kvp.Value);
+                    }
+                }
+            }
+
+            // Process colors
+            if (properties.m_Colors != null)
+            {
+                foreach (var kvp in properties.m_Colors)
+                {
+                    if (material.HasProperty(kvp.Key))
+                    {
+                        material.SetColor(kvp.Key, kvp.Value.ToColor());
+                    }
+                }
+            }
+
+            // Process textures
+            if (properties.m_TexEnvs != null)
+            {
+                foreach (var kvp in properties.m_TexEnvs)
+                {
+                    if (material.HasProperty(kvp.Key))
+                    {
+                        ProcessTextureProperty(material, kvp.Key, kvp.Value, textureCache, loadedTexturePaths, shader);
+                    }
                 }
             }
         }
 
-        private static void ProcessUnityMaterialProperties(JObject jsonObject, Material newMaterial, Dictionary<string, Texture> textureCache, List<string> loadedTexturePaths, Shader shaderToApply)
+        private static void ProcessUnrealMaterialProperties(MaterialJsonStructure materialData, Material material,
+            Dictionary<string, Texture> textureCache, List<string> loadedTexturePaths)
         {
-            ProcessProperties(jsonObject["m_SavedProperties"]["m_Floats"], newMaterial, (propertyName, propertyValue) =>
+            var parameters = materialData.Parameters;
+
+            // Process colors
+            if (parameters.Colors != null)
             {
-                if (newMaterial.HasProperty(propertyName) && propertyValue.Type == JTokenType.Float)
+                foreach (var kvp in parameters.Colors)
                 {
-                    newMaterial.SetFloat(propertyName, propertyValue.Value<float>());
-                }
-            });
-
-            ProcessProperties(jsonObject["m_SavedProperties"]["m_Colors"], newMaterial, (propertyName, propertyValue) =>
-            {
-                if (newMaterial.HasProperty(propertyName))
-                {
-                    JObject colorObject = propertyValue.ToObject<JObject>();
-                    Color color = new Color(colorObject["r"].Value<float>(), colorObject["g"].Value<float>(), colorObject["b"].Value<float>(), colorObject["a"].Value<float>());
-                    newMaterial.SetColor(propertyName, color);
-                }
-            });
-
-            ProcessProperties(jsonObject["m_SavedProperties"]["m_TexEnvs"], newMaterial, (propertyName, propertyValue) =>
-            {
-                if (newMaterial.HasProperty(propertyName))
-                {
-                    JObject textureObject = propertyValue["m_Texture"].ToObject<JObject>();
-
-                    if (!textureObject.ContainsKey("Name"))
+                    string unityPropertyName = "_" + kvp.Key;
+                    if (material.HasProperty(unityPropertyName))
                     {
-                        HoyoToonLogs.ErrorDebug("You're using outdated materials. Please download/extract using the latest AssetStudio.");
-                        EditorUtility.DisplayDialog("Error", $"You're using outdated materials. Please download/extract using the latest AssetStudio.", "OK");
-                    }
-
-                    string textureName = textureObject["Name"].Value<string>();
-
-                    if (string.IsNullOrEmpty(textureName))
-                    {
-                        HoyoToonTextureManager.HardsetTexture(newMaterial, propertyName, shaderToApply);
-                    }
-                    else
-                    {
-                        Texture texture = null;
-
-                        if (textureCache.ContainsKey(textureName))
-                        {
-                            texture = textureCache[textureName];
-                        }
-                        else
-                        {
-                            string[] textureGUIDs = AssetDatabase.FindAssets(textureName + " t:texture");
-
-                            if (textureGUIDs.Length > 0)
-                            {
-                                string texturePath = AssetDatabase.GUIDToAssetPath(textureGUIDs[0]);
-                                texture = AssetDatabase.LoadAssetAtPath<Texture>(texturePath);
-
-                                if (texture != null)
-                                {
-                                    textureCache.Add(textureName, texture);
-                                }
-                            }
-                        }
-
-                        if (texture != null)
-                        {
-                            newMaterial.SetTexture(propertyName, texture);
-                            string texturePath = AssetDatabase.GetAssetPath(texture);
-                            loadedTexturePaths.Add(texturePath);
-
-                            Vector2 scale = new Vector2(propertyValue["m_Scale"]["X"].Value<float>(), propertyValue["m_Scale"]["Y"].Value<float>());
-                            Vector2 offset = new Vector2(propertyValue["m_Offset"]["X"].Value<float>(), propertyValue["m_Offset"]["Y"].Value<float>());
-                            newMaterial.SetTextureScale(propertyName, scale);
-                            newMaterial.SetTextureOffset(propertyName, offset);
-                        }
+                        material.SetColor(unityPropertyName, kvp.Value.ToColor());
                     }
                 }
-            });
-        }
+            }
 
-        private static void ProcessUnrealMaterialProperties(JObject jsonObject, Material newMaterial, Dictionary<string, Texture> textureCache, List<string> loadedTexturePaths)
-        {
-            ProcessProperties(jsonObject["Parameters"]["Colors"], newMaterial, (propertyName, propertyValue) =>
+            // Process scalars
+            if (parameters.Scalars != null)
             {
-                string unityPropertyName = "_" + propertyName;
-
-                if (newMaterial.HasProperty(unityPropertyName))
+                foreach (var kvp in parameters.Scalars)
                 {
-                    JObject colorObject = propertyValue.ToObject<JObject>();
-                    Color color;
-                    string hex = colorObject["Hex"].Value<string>();
-                    if (!string.IsNullOrEmpty(hex) && ColorUtility.TryParseHtmlString(hex, out color))
+                    string unityPropertyName = "_" + kvp.Key;
+                    if (material.HasProperty(unityPropertyName))
                     {
-                        newMaterial.SetColor(unityPropertyName, color);
-                    }
-                    else
-                    {
-                        color = new Color(colorObject["R"].Value<float>(), colorObject["G"].Value<float>(), colorObject["B"].Value<float>(), colorObject["A"].Value<float>());
-                        newMaterial.SetColor(unityPropertyName, color);
+                        material.SetFloat(unityPropertyName, kvp.Value);
                     }
                 }
-            });
+            }
 
-            ProcessProperties(jsonObject["Parameters"]["Scalars"], newMaterial, (propertyName, propertyValue) =>
+            // Process switches
+            if (parameters.Switches != null)
             {
-                string unityPropertyName = "_" + propertyName;
-
-                if (newMaterial.HasProperty(unityPropertyName) && propertyValue.Type == JTokenType.Float)
+                foreach (var kvp in parameters.Switches)
                 {
-                    newMaterial.SetFloat(unityPropertyName, propertyValue.Value<float>());
-                }
-            });
-
-            ProcessProperties(jsonObject["Parameters"]["Switches"], newMaterial, (propertyName, propertyValue) =>
-            {
-                string unityPropertyName = "_" + propertyName;
-
-                if (newMaterial.HasProperty(unityPropertyName) && propertyValue.Type == JTokenType.Boolean)
-                {
-                    newMaterial.SetInt(unityPropertyName, propertyValue.Value<bool>() ? 1 : 0);
-                }
-            });
-
-            ProcessProperties(jsonObject["Parameters"]["Properties"], newMaterial, (propertyName, propertyValue) =>
-            {
-                string unityPropertyName = "_" + propertyName;
-
-                if (newMaterial.HasProperty(unityPropertyName) && propertyValue.Type == JTokenType.Boolean)
-                {
-                    newMaterial.SetInt(unityPropertyName, propertyValue.Value<bool>() ? 1 : 0);
-                }
-            });
-
-            ProcessProperties(jsonObject["Textures"], newMaterial, (propertyName, propertyValue) =>
-            {
-                string unityPropertyName = "_" + propertyName;
-
-                if (newMaterial.HasProperty(unityPropertyName))
-                {
-                    string texturePath = propertyValue.Value<string>();
-
-                    if (!string.IsNullOrEmpty(texturePath))
+                    string unityPropertyName = "_" + kvp.Key;
+                    if (material.HasProperty(unityPropertyName))
                     {
+                        material.SetInt(unityPropertyName, kvp.Value ? 1 : 0);
+                    }
+                }
+            }
+
+            // Process render queue
+            if (parameters.RenderQueue != 0)
+            {
+                material.renderQueue = parameters.RenderQueue;
+            }
+
+            // Process textures
+            if (materialData.Textures != null)
+            {
+                foreach (var kvp in materialData.Textures)
+                {
+                    string unityPropertyName = "_" + kvp.Key;
+                    if (material.HasProperty(unityPropertyName))
+                    {
+                        string texturePath = kvp.Value;
                         string textureName = texturePath.Substring(texturePath.LastIndexOf('.') + 1);
-
-                        Texture texture = null;
-
-                        if (textureCache.ContainsKey(textureName))
-                        {
-                            texture = textureCache[textureName];
-                        }
-                        else
-                        {
-                            string[] textureGUIDs = AssetDatabase.FindAssets(textureName + " t:texture");
-
-                            if (textureGUIDs.Length > 0)
-                            {
-                                string assetPath = AssetDatabase.GUIDToAssetPath(textureGUIDs[0]);
-                                texture = AssetDatabase.LoadAssetAtPath<Texture>(assetPath);
-
-                                if (texture != null)
-                                {
-                                    textureCache.Add(textureName, texture);
-                                }
-                            }
-                        }
-
+                        Texture texture = FindOrLoadTexture(textureName, textureCache);
+                        
                         if (texture != null)
                         {
-                            newMaterial.SetTexture(unityPropertyName, texture);
+                            material.SetTexture(unityPropertyName, texture);
                             string assetPath = AssetDatabase.GetAssetPath(texture);
                             loadedTexturePaths.Add(assetPath);
 
-                            Vector2 scale = Vector2.one;
-                            Vector2 offset = Vector2.zero;
-                            newMaterial.SetTextureScale(unityPropertyName, scale);
-                            newMaterial.SetTextureOffset(unityPropertyName, offset);
+                            material.SetTextureScale(unityPropertyName, Vector2.one);
+                            material.SetTextureOffset(unityPropertyName, Vector2.zero);
                         }
                     }
                 }
-            });
+            }
         }
 
-        private static bool ContainsKey(JToken token, string key)
+        private static void ProcessTextureProperty(Material material, string propertyName, MaterialJsonStructure.TexturePropertyInfo textureInfo,
+            Dictionary<string, Texture> textureCache, List<string> loadedTexturePaths, Shader shader)
         {
-            if (token is JArray array)
+            string textureName = textureInfo.m_Texture.Name;
+
+            if (string.IsNullOrEmpty(textureName))
             {
-                return array.Any(j => j["Key"].Value<string>() == key);
+                HoyoToonTextureManager.HardsetTexture(material, propertyName, shader);
+                return;
             }
-            else if (token is JObject obj)
+
+            Texture texture = FindOrLoadTexture(textureName, textureCache);
+            if (texture != null)
             {
-                return obj.ContainsKey(key);
+                material.SetTexture(propertyName, texture);
+                string texturePath = AssetDatabase.GetAssetPath(texture);
+                loadedTexturePaths.Add(texturePath);
+
+                material.SetTextureScale(propertyName, textureInfo.m_Scale.ToVector2());
+                material.SetTextureOffset(propertyName, textureInfo.m_Offset.ToVector2());
             }
-            return false;
+        }
+
+        private static Texture FindOrLoadTexture(string textureName, Dictionary<string, Texture> textureCache)
+        {
+            if (textureCache.TryGetValue(textureName, out Texture texture))
+            {
+                return texture;
+            }
+
+                            string[] textureGUIDs = AssetDatabase.FindAssets(textureName + " t:texture");
+                            if (textureGUIDs.Length > 0)
+                            {
+                string texturePath = AssetDatabase.GUIDToAssetPath(textureGUIDs[0]);
+                texture = AssetDatabase.LoadAssetAtPath<Texture>(texturePath);
+                                if (texture != null)
+                                {
+                                    textureCache.Add(textureName, texture);
+                }
+            }
+
+            return texture;
         }
 
         public static void ApplyCustomSettingsToMaterial(Material material, string jsonFileName)
@@ -719,6 +578,118 @@ namespace HoyoToon
             string jsonContent = jsonObject.ToString(Formatting.Indented);
 
             File.WriteAllText(outputPath, jsonContent);
+        }
+
+        private static Shader DetermineShader(MaterialJsonStructure materialData)
+        {
+            // If shader is directly specified in the Unity format
+            if (materialData.m_Shader?.Name != null && !string.IsNullOrEmpty(materialData.m_Shader.Name))
+            {
+                Shader shader = Shader.Find(materialData.m_Shader.Name);
+                if (shader != null)
+                {
+                    HoyoToonLogs.LogDebug($"Found shader '{materialData.m_Shader.Name}' in JSON");
+                    return shader;
+                }
+            }
+
+            var shaderKeywords = HoyoToonDataManager.Data.ShaderKeywords;
+            var shaderPaths = HoyoToonDataManager.Data.Shaders;
+
+            // Build shader keyword mapping
+            Dictionary<string, string> shaderKeys = new Dictionary<string, string>();
+            foreach (var shader in shaderKeywords)
+            {
+                foreach (var keyword in shader.Value)
+                {
+                    shaderKeys[keyword] = shader.Key;
+                }
+            }
+
+            // Check for shader keywords in both Unity and Unreal formats
+            foreach (var shaderKey in shaderKeys)
+            {
+                if (materialData.IsUnityFormat)
+                {
+                    var properties = materialData.m_SavedProperties;
+                    bool hasKeywordInTexEnvs = properties.m_TexEnvs?.ContainsKey(shaderKey.Key) ?? false;
+                    bool hasKeywordInFloats = properties.m_Floats?.ContainsKey(shaderKey.Key) ?? false;
+
+                    if (hasKeywordInTexEnvs || hasKeywordInFloats)
+                    {
+                        if (shaderKey.Value == "Hi3Shader")
+                        {
+                            // Special handling for Hi3 shaders
+                            bool isPart2Shader = shaderKeywords["HI3P2Shader"].Any(keyword =>
+                                (properties.m_TexEnvs?.ContainsKey(keyword) ?? false) ||
+                                (properties.m_Floats?.ContainsKey(keyword) ?? false));
+
+                            string shaderKeyToUse = isPart2Shader ? "HI3P2Shader" : "Hi3Shader";
+                            return Shader.Find(shaderPaths[shaderKeyToUse][0]);
+                        }
+                        
+                        return Shader.Find(shaderPaths[shaderKey.Value][0]);
+                    }
+                }
+                else if (materialData.IsUnrealFormat)
+                {
+                    bool hasKeywordInTextures = materialData.Textures?.ContainsKey(shaderKey.Key) ?? false;
+                    bool hasKeywordInScalars = materialData.Parameters?.Scalars?.ContainsKey(shaderKey.Key) ?? false;
+                    bool hasKeywordInSwitches = materialData.Parameters?.Switches?.ContainsKey(shaderKey.Key) ?? false;
+                    bool hasKeywordInProperties = materialData.Parameters?.Properties?.ContainsKey(shaderKey.Key) ?? false;
+
+                    // Special check for WuWa shader which uses ShadingModel
+                    if (shaderKey.Key == "ShadingModel")
+                    {
+                        if (materialData.Parameters?.ShadingModel != null)
+                        {
+                            HoyoToonLogs.LogDebug("Found WuWa shader through ShadingModel parameter");
+                            return Shader.Find(shaderPaths["WuWaShader"][0]);
+                        }
+                    }
+
+                    if (hasKeywordInTextures || hasKeywordInScalars || hasKeywordInSwitches || hasKeywordInProperties)
+                    {
+                        HoyoToonLogs.LogDebug($"Found shader through keyword: {shaderKey.Key} for shader: {shaderKey.Value}");
+                        return Shader.Find(shaderPaths[shaderKey.Value][0]);
+                    }
+                }
+            }
+
+            return null;
+        }
+
+        private static void ProcessUnrealTexture(Material material, string propertyName, MaterialJsonStructure.TextureInfo textureInfo,
+            Dictionary<string, Texture> textureCache, List<string> loadedTexturePaths)
+        {
+            if (string.IsNullOrEmpty(textureInfo.Name)) return;
+
+            string textureName = textureInfo.Name.Substring(textureInfo.Name.LastIndexOf('.') + 1);
+            Texture texture = FindOrLoadTexture(textureName, textureCache);
+            
+            if (texture != null)
+            {
+                material.SetTexture(propertyName, texture);
+                string texturePath = AssetDatabase.GetAssetPath(texture);
+                loadedTexturePaths.Add(texturePath);
+
+                // Set default texture scale and offset for Unreal textures
+                material.SetTextureScale(propertyName, Vector2.one);
+                material.SetTextureOffset(propertyName, Vector2.zero);
+            }
+        }
+
+        private static bool ContainsKey(JToken token, string key)
+        {
+            if (token is JArray array)
+            {
+                return array.Any(j => j["Key"].Value<string>() == key);
+            }
+            else if (token is JObject obj)
+            {
+                return obj.ContainsKey(key);
+            }
+            return false;
         }
 
         #endregion
