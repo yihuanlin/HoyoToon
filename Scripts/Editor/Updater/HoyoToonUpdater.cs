@@ -114,7 +114,7 @@ namespace HoyoToon
 
                 if (release == null)
                 {
-                    HoyoToonLogs.ErrorDebug($"Release {remoteVersion} not found.");
+                    HoyoToonLogs.ErrorDebug($"Release {remoteVersion} still cooking. Maybe we should explore this release later?");
                     yield break;
                 }
 
