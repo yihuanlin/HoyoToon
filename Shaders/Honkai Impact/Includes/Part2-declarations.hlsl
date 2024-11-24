@@ -15,6 +15,9 @@ Texture2D _RampMap;
 Texture2D _JitterMap;
 Texture2D _HairStripPatternsTex;
 Texture2D _FaceExpTex;
+Texture2D _StockingMap;
+Texture2D _StockingRampTex;
+
 float4 _JitterMap_ST;
 float4 _HairStripPatternsTex_ST;
 float4 _FaceExpTex_ST;
@@ -177,3 +180,18 @@ float _DebugMaterialIDs;
 // ===  unity globals === //
 uniform float _GI_Intensity;
 uniform float4x4 _LightMatrix0;
+
+float _EnableStocking;
+float _StockingDiffSoftRange;
+float _StockingDarkenRange;
+float4 _StockingDarkenColor;
+float4 _StockingDarkenColorAdd;
+float _StockingSpecNormalInt;
+float _StockingSpecRange;
+float _StockingSpecInt;
+float _StockingEdgeRange;
+float _StockingEdgeSoft;
+float4 _StockingEdgeColor;
+float4 _StockingStretchColor;
+float _EnableDynamicStretch;
+float _StockingLightArea;

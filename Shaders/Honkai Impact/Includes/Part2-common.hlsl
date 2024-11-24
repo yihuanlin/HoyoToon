@@ -18,49 +18,52 @@ float3 normal_offline(float3 normal, float3 tangent, float3 bitangent, float3 bu
 // online uses a derivative function to first calculate tangents given a uv and a positiong vector
 // this is useful for when you're storing secondary normals where the tangent would normally be
 // genshin uses an implementation similiar to this one
-void normal_online(float3 bumpmap, float3 ws_pos, float2 uv, inout float3 normal, out float3 bitangent)
+void normal_online(float3 bumpmap, float3 ws_pos, float2 uv, inout float3 normal, inout float3 tangent, inout float3 bitangent)
 {
-    // reencode normal map to the proper ranges and scale it by _BumpScale
-    bumpmap.xyz = bumpmap.xyz * 2.0f - 1.0f;
-    bumpmap.xy = bumpmap.xy * (float2)_BumpScale;
-    bumpmap.x = -bumpmap.x;
-    bumpmap.xyz = normalize(bumpmap);
+    // if(_UseBump) 
+    // {
+        // reencode normal map to the proper ranges and scale it by _BumpScale
+        bumpmap.xyz = bumpmap.xyz * 2.0f - 1.0f;
+        bumpmap.xy = bumpmap.xy * (float2)_BumpScale;
+        bumpmap.x = -bumpmap.x;
+        bumpmap.xyz = normalize(bumpmap);
 
-    // world space position derivative
-    float3 p_dx = ddx(ws_pos);
-    float3 p_dy = ddy(ws_pos);
+        // world space position derivative
+        float3 p_dx = ddx(ws_pos);
+        float3 p_dy = ddy(ws_pos);
 
-    // texture coord derivative
-    float3 uv_dx;
-    uv_dx.xy = ddx(uv);
-    float3 uv_dy;
-    uv_dy.xy = ddy(uv);
+        // texture coord derivative
+        float3 uv_dx;
+        uv_dx.xy = ddx(uv);
+        float3 uv_dy;
+        uv_dy.xy = ddy(uv);
 
-    uv_dy.z = -uv_dx.y;
-    uv_dx.z = uv_dy.x;
+        uv_dy.z = -uv_dx.y;
+        uv_dx.z = uv_dy.x;
 
-    // this functions the same way as the w component of a traditional set of tangents.
-    // determinent of the uv the direction of the bitangent
-    float3 uv_det = dot(uv_dx.xz, uv_dy.yz);
-    uv_det = -sign(uv_det);
+        // this functions the same way as the w component of a traditional set of tangents.
+        // determinent of the uv the direction of the bitangent
+        float3 uv_det = dot(uv_dx.xz, uv_dy.yz);
+        uv_det = -sign(uv_det);
 
-    // normals are inverted in the case of a back-facing poly
-    // useful for the two sided dresses and what not... 
-    float3 corrected_normal = normal;
+        // normals are inverted in the case of a back-facing poly
+        // useful for the two sided dresses and what not... 
+        float3 corrected_normal = normal;
 
-    float2 tangent_direction = uv_det.xy * uv_dy.yz;
-    float3 tangent = (tangent_direction.y * p_dy.xyz) + (p_dx * tangent_direction.x);
-    tangent = normalize(tangent);
+        float2 tangent_direction = uv_det.xy * uv_dy.yz;
+        tangent = (tangent_direction.y * p_dy.xyz) + (p_dx * tangent_direction.x);
+        tangent = normalize(tangent);
 
-    bitangent = (corrected_normal.yzx * tangent.zxy) - (corrected_normal.zxy * tangent.yzx); 
-    bitangent = bitangent * -uv_det;
+        bitangent = (corrected_normal.yzx * tangent.zxy) - (corrected_normal.zxy * tangent.yzx); 
+        bitangent = bitangent * -uv_det;
 
-    float3x3 tbn = {tangent, bitangent, corrected_normal};
+        float3x3 tbn = {tangent, bitangent, corrected_normal};
 
-    float3 mapped_normals = mul(bumpmap.xyz, tbn);
-    mapped_normals = normalize(mapped_normals); // for some reason, this normalize messes things up in mmd
+        float3 mapped_normals = mul(bumpmap.xyz, tbn);
+        mapped_normals = normalize(mapped_normals); // for some reason, this normalize messes things up in mmd
 
-    if(_UseBump) normal = mapped_normals;
+        if(_UseBump) normal = mapped_normals;
+    // }
 }
 
 float material_region(float alpha)
@@ -401,6 +404,55 @@ float3 hair_specular(float3 normal, float3 bitangent, float3 light, float3 view,
         float3 final_shine = (shadow * 0.5f + 0.5f) * shine_color;
         #endif
     return shine_color;
+}
+
+float3 tights(float3 normal, float3 light, float3 view, float3 tangent, float3 bitangent, float2 uv, float4 lightmap, float3 color)
+{
+    if(_EnableStocking)
+    {
+        float ndotl = dot(normal, light) * 0.5f + 0.5f;
+        float shadow = smoothstep((-_StockingDiffSoftRange) + _StockingLightArea, _StockingDiffSoftRange + _StockingLightArea, ndotl);
+        
+        float ndotv = 1.0f - dot(normal, view);
+
+        float stock_dark_area = min(pow(ndotv, _StockingDarkenRange), 1.0f);
+        float3 stocking_dark = ndotv * _StockingDarkenColor.xyz + (1.0f - ndotv);
+
+        float stock_add_area = saturate((min(pow(ndotv, 2.5f), 1.0f) + -0.6f) * -2.0f);
+        float something_else = -(stock_add_area * -2.0f + 3.0f) * (stock_add_area * stock_add_area) + 1.f;
+        stock_add_area = (stock_add_area * stock_add_area) * (stock_add_area * -2.0f + 3.0f);
+        
+        float3 stocking_add = something_else * _StockingDarkenColorAdd.xyz + stock_add_area;
+        
+        float3 stocking_color = stocking_dark * stocking_add;
+
+
+        float3 stocking_ramp = _StockingRampTex.Sample(sampler_linear_clamp, float2(shadow, 0.4f));
+
+        stocking_ramp = min(stocking_add, stocking_ramp);
+
+        // aniso line 
+        float3 aniso = normal - tangent;
+        aniso = aniso * _StockingSpecNormalInt + tangent;
+        aniso = saturate(dot(aniso, view));
+        aniso = (pow(aniso + 0.01f, _StockingSpecRange * 255.0f));
+
+        float3 aniso_ramp = _StockingRampTex.Sample(sampler_linear_clamp, float2(aniso.x, 0.8f));
+
+        aniso_ramp = (aniso_ramp * lightmap.y) * _StockingSpecInt;
+
+        float stocking_edge = 1.0f - min(pow(ndotv, _StockingEdgeRange), 1.0f);
+
+        float stocking_shadow = saturate(1.0f - dot(normal, light));
+
+        stocking_shadow = smoothstep((-_StockingEdgeSoft) + 0.800000012, ((_StockingEdgeSoft) + 0.800000012), stocking_edge * stocking_shadow);
+        
+        float3 stocking = color * stocking_ramp + aniso_ramp;
+        stocking = _StockingEdgeColor * stocking_shadow + stocking;
+
+        return stocking;
+    }
+    return 0;
 }
 
 float4 rg_color(float alpha)

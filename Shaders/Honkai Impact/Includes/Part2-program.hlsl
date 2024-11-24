@@ -59,7 +59,7 @@ float4 ps_model(vs_out i,  bool vface : SV_ISFRONTFACE) : SV_TARGET
     float region = material_region(lightmap.w);
     
     // bump mapping : 
-    normal_online(bump, i.ws_pos, uv, normal, bitangent);
+    normal_online(bump, i.ws_pos, uv, normal, tangent, bitangent);
     bitangent = normalize(bitangent);
 
     // now the dot products : 
@@ -75,7 +75,8 @@ float4 ps_model(vs_out i,  bool vface : SV_ISFRONTFACE) : SV_TARGET
         if(variant_selector == 0)
         {
             shaded_area = shadow_area_body(lightmap.y, ndotl);
-            shadow_color = shadow_base(shaded_area.x, lightmap.w, lightmap.y);
+            shadow_color = (_EnableStocking) ? shadow_base(dot(normal, light), lightmap.w, 0.5f) : shadow_base(shaded_area.x, lightmap.w, lightmap.y);
+            shadow_color = saturate(shadow_color);
         }
         else if(variant_selector == 1 && _EnableFaceMap)
         {
@@ -136,6 +137,11 @@ float4 ps_model(vs_out i,  bool vface : SV_ISFRONTFACE) : SV_TARGET
             shadow = shadow * shaded_area.x;
             color.xyz = color.xyz * shadow;
         #endif
+
+        if(_EnableStocking && !metal_area)
+        {
+            color.xyz = tights(normal, light, view, bitangent, tangent, uv, lightmap.x, color.xyz);
+        }
 
         color.xyz = color.xyz * float3(0.891f, 0.919f, 0.942f) + specular;
 

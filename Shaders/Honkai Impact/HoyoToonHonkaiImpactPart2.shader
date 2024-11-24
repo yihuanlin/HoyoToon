@@ -85,6 +85,25 @@ Shader "HoyoToon/Honkai Impact/Character Part 2"
         [HideInInspector] end_faceshading(" ", Float) = 0
         //endex
 
+        [HideInInspector] start_stocking("Stockings", Float) = 0
+            [Toggle] _EnableStocking ("Stocking", Float) = 0
+            _StockingMap ("Stocking Map", 2D) = "black" { }
+            _StockingRampTex ("Ramp Map", 2D) = "white" { }
+            _StockingDiffSoftRange ("Diffuse Soft Range", Range(0.01, 1)) = 0.8
+            _StockingDarkenRange ("Darken Range", Range(0.01, 10)) = 3
+            _StockingDarkenColor ("Darken Color", Color) = (0.5,0.5,0.5,0.5)
+            _StockingDarkenColorAdd ("Darken Color Add", Color) = (0.5,0.5,0.5,0.5)
+            _StockingSpecNormalInt ("Specular Normal Int", Range(0, 1)) = 1
+            _StockingSpecRange ("Specular Range", Range(0, 1)) = 1
+            _StockingSpecInt ("Specular Int", Range(0, 0.4)) = 0.2
+            _StockingEdgeRange ("Edge Range", Range(0, 5)) = 1
+            _StockingEdgeSoft ("Edge Soft", Range(0, 1)) = 0.4
+            _StockingEdgeColor ("Edge Color", Color) = (0.5,0.5,0.5,0.5)
+            // _StockingStretchColor ("Stretch Color", Color) = (0.5,0.5,0.5,0.5)
+            // _EnableDynamicStretch ("Enable Dynamic Stretch", Float) = 0
+            _StockingLightArea ("Stocking Light Area", Float) = 0.6
+        [HideInInspector] end_stocking("", Float) = 0
+
         [HideInInspector] start_lighting("Lighting Options", Float) = 0
             [Toggle] _MultiLight ("Enable Multiple Lights Support", Float) =0
             [Toggle] _FilterLight ("Limit Spot/Point Light Intensity", Float) = 1    
