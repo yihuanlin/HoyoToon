@@ -106,7 +106,7 @@ namespace HoyoToon
             Texture2D hsrLogo = Resources.Load<Texture2D>("UI/hsrlogo");
             Texture2D gilogo = Resources.Load<Texture2D>("UI/gilogo");
             Texture2D hi3p1Logo = Resources.Load<Texture2D>("UI/hi3p1logo");
-            Texture2D hi3p2Logo = Resources.Load<Texture2D>("UI/hi3p2logo");
+            Texture2D HI3P2Logo = Resources.Load<Texture2D>("UI/HI3P2logo");
             Texture2D wuwalogo = Resources.Load<Texture2D>("UI/wuwalogo");
             Texture2D scriptslogo = Resources.Load<Texture2D>("UI/scriptslogo");
             Texture2D uilogo = Resources.Load<Texture2D>("UI/uilogo");
@@ -130,9 +130,9 @@ namespace HoyoToon
                     {
                         DrawHeaderImage(hi3p1Logo);
                     }
-                    else if (line.Contains("Honkai Impact Part 2") && hi3p2Logo != null)
+                    else if (line.Contains("Honkai Impact Part 2") && HI3P2Logo != null)
                     {
-                        DrawHeaderImage(hi3p2Logo);
+                        DrawHeaderImage(HI3P2Logo);
                     }
                     else if (line.Contains("Wuthering Waves") && wuwalogo != null)
                     {
