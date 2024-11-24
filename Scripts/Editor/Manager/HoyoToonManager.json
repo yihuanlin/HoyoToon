@@ -1,6 +1,14 @@
 {
   "Textures": {
-    "ClampKeyword": ["Dissolve", "ramp", "Star", "_Skin"],
+    "ClampKeyword": [
+      "Dissolve",
+      "ramp",
+      "Star",
+      "_Skin"
+    ],
+    "SRGBKeywords": [
+      "diffuse"
+    ],
     "NonSRGBKeywords": [
       "normalmap",
       "lightmap",
@@ -17,7 +25,9 @@
       "materialidvalueslut",
       "ColorMask",
       "_Mask",
-      "_Normal"
+      "_Normal",
+      "_VAT",
+      "HairVat"
     ],
     "EndsWithNonSRGBKeywords": [
       "_HM",
@@ -28,16 +38,32 @@
       "_CUBE",
       "_EG",
       "_EM",
-      "T_Caustic"
+      "T_Caustic",
+      "Ramp_NoStream"
     ],
-    "NonPower2Keywords": ["materialidvalueslut"]
+    "NonPower2Keywords": [
+      "materialidvalueslut"
+    ]
   },
   "Shaders": {
-    "HSRShader": ["HoyoToon/Star Rail/Character"],
-    "GIShader": ["HoyoToon/Genshin/Character"],
-    "Hi3Shader": ["HoyoToon/Honkai Impact/Character Part 1"],
-    "Hi3P2Shader": ["HoyoToon/Honkai Impact/Character Part 2"],
-    "WuWaShader": ["HoyoToon/Wuthering Waves/Character"]
+    "HSRShader": [
+      "HoyoToon/Star Rail/Character"
+    ],
+    "GIShader": [
+      "HoyoToon/Genshin/Character"
+    ],
+    "Hi3Shader": [
+      "HoyoToon/Honkai Impact/Character Part 1"
+    ],
+    "Hi3P2Shader": [
+      "HoyoToon/Honkai Impact/Character Part 2"
+    ],
+    "WuWaShader": [
+      "HoyoToon/Wuthering Waves/Character"
+    ],
+    "ZZZShader": [
+      "HoyoToon/Zenless Zone Zero/Character"
+    ]
   },
   "ShaderKeywords": {
     "HSRShader": [
@@ -45,10 +71,27 @@
       "_DissolveDistortionIntensity",
       "_DissolveRate"
     ],
-    "GIShader": ["_UtilityDisplay1", "_DisableCGP", "UseGlassSpecularToggle"],
-    "Hi3Shader": ["_SPCubeMapIntensity"],
-    "Hi3P2Shader": ["_MetalMapGrp", "_MicsGrp"],
-    "WuWaShader": ["ShadingModel"]
+    "GIShader": [
+      "_UtilityDisplay1",
+      "_NyxStateOutlineColorOnBodyOpacity",
+      "_DisableCGP",
+      "UseGlassSpecularToggle",
+      "_CurrentFrame"
+    ],
+    "Hi3Shader": [
+      "_SPCubeMapIntensity"
+    ],
+    "Hi3P2Shader": [
+      "_MetalMapGrp",
+      "_MicsGrp"
+    ],
+    "WuWaShader": [
+      "ShadingModel"
+    ],
+    "ZZZShader": [
+      "_YOffsetEnter",
+      "_PointSpace"
+    ]
   },
   "MaterialSettings": {
     "HoyoToon/Star Rail/Character": {
@@ -175,7 +218,21 @@
         "_SrcBlend": "_SrcBlendMode",
         "_DstBlend": "_DstBlendMode",
         "variant_selector": 3,
-        "_UseWeapon": 1
+        "_UseGlassSpecularToggle": 1,
+        "renderQueue": 2001
+      },
+      "Helmet_Glass": {
+        "_SrcBlend": "_SrcBlendMode",
+        "_DstBlend": "_DstBlendMode",
+        "variant_selector": 3,
+        "_UseGlassSpecularToggle": 1,
+        "renderQueue": 2001
+      },
+      "Eff_Mavuika_Hair1": {
+        "_VertexAnimType": 1
+      },
+      "Eff_Mavuika_VAT1": {
+        "_VertexAnimType": 2
       },
       "Default": {
         "variant_selector": 0
@@ -337,5 +394,8 @@
       }
     }
   },
-  "SkipMeshes": ["Eyes", "Eye"]
+  "SkipMeshes": [
+    "Eyes",
+    "Eye"
+  ]
 }
