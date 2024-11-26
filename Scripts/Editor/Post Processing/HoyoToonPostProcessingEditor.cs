@@ -31,10 +31,29 @@ namespace HoyoToon
         private bool _showSharpeningSettings = true;
         private bool _showVignetteSettings = true;
 
+        private Texture2D _backgroundTexture;
+        private Texture2D _logoTexture;
+
         private void OnEnable()
         {
-            _target = (HoyoToonPostProcessing)target; 
+            _target = (HoyoToonPostProcessing)target;
             FindProperties();
+            LoadEditorResources();
+        }
+
+        private void OnDisable()
+        {
+            // Clean up cached resources
+            if (_backgroundTexture != null)
+            {
+                Resources.UnloadAsset(_backgroundTexture);
+                _backgroundTexture = null;
+            }
+            if (_logoTexture != null)
+            {
+                Resources.UnloadAsset(_logoTexture);
+                _logoTexture = null;
+            }
         }
 
         private void FindProperties()
@@ -55,6 +74,18 @@ namespace HoyoToon
             _vignetteColor = serializedObject.FindProperty("vignetteColor");
             _vignetteParams = serializedObject.FindProperty("vignetteParams");
             _useDepthBuffer = serializedObject.FindProperty("useDepthBuffer");
+        }
+
+        private void LoadEditorResources()
+        {
+            if (_backgroundTexture == null)
+            {
+                _backgroundTexture = Resources.Load<Texture2D>("UI/background");
+            }
+            if (_logoTexture == null)
+            {
+                _logoTexture = Resources.Load<Texture2D>("UI/postlogo");
+            }
         }
 
         public override void OnInspectorGUI()
@@ -122,15 +153,15 @@ namespace HoyoToon
             if (_showTonemappingSettings)
             {
                 EditorGUI.indentLevel++;
-                
+
                 EditorGUILayout.PropertyField(_exposure, new GUIContent("Exposure"));
-                
+
                 if (!((HoyoToonPostProcessing)target).IsGameTypeGenshin())
                 {
                     HoyoToonPostProcessing postProcessing = (HoyoToonPostProcessing)target;
 
                     EditorGUI.indentLevel++;
-                    _showLUTSettings = EditorGUILayout.Foldout(_showLUTSettings, "LUT 2D Parameters", true);  
+                    _showLUTSettings = EditorGUILayout.Foldout(_showLUTSettings, "LUT 2D Parameters", true);
                     if (_showLUTSettings)
                     {
                         EditorGUI.indentLevel++;
@@ -144,7 +175,7 @@ namespace HoyoToon
                     if (postProcessing.IsGameTypeStarRail() || postProcessing.IsGameTypeWutheringWaves())
                     {
                         EditorGUILayout.PropertyField(
-                            postProcessing.IsGameTypeStarRail() ? _starRailLUT : _wuwaLUT, 
+                            postProcessing.IsGameTypeStarRail() ? _starRailLUT : _wuwaLUT,
                             new GUIContent("LUT Texture")
                         );
                     }
@@ -182,33 +213,20 @@ namespace HoyoToon
 
         private void DrawLogo()
         {
-            // Load and draw logo
+            // Draw logo using cached textures
             Rect bgRect = GUILayoutUtility.GetRect(GUIContent.none, GUIStyle.none, GUILayout.ExpandWidth(true), GUILayout.Height(145.0f));
             bgRect.x = 0;
             bgRect.width = EditorGUIUtility.currentViewWidth;
             Rect logoRect = new Rect(bgRect.width / 2 - 375f, bgRect.height / 2 - 65f, 750f, 130f);
 
-            string bgPathProperty = "UI/background";
-            string logoPathProperty = "UI/postlogo";
-
-            if (!string.IsNullOrEmpty(bgPathProperty))
+            if (_backgroundTexture != null)
             {
-                Texture2D bg = Resources.Load<Texture2D>(bgPathProperty);
-
-                if (bg != null)
-                {
-                    GUI.DrawTexture(bgRect, bg, ScaleMode.ScaleAndCrop);
-                }
+                GUI.DrawTexture(bgRect, _backgroundTexture, ScaleMode.ScaleAndCrop);
             }
 
-            if (!string.IsNullOrEmpty(logoPathProperty))
+            if (_logoTexture != null)
             {
-                Texture2D logo = Resources.Load<Texture2D>(logoPathProperty);
-
-                if (logo != null)
-                {
-                    GUI.DrawTexture(logoRect, logo, ScaleMode.ScaleToFit);
-                }
+                GUI.DrawTexture(logoRect, _logoTexture, ScaleMode.ScaleToFit);
             }
         }
     }

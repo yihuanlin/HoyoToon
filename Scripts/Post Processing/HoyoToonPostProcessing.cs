@@ -185,8 +185,20 @@ namespace HoyoToon
                 RemoveSpecificCommandBuffer(_camera, CameraEvent.BeforeImageEffects, _bloomBufferName);
                 RemoveSpecificCommandBuffer(_camera, CameraEvent.BeforeImageEffects, _layerBufferName);
             }
-            _bloomBuffer = null;
-            _layerBuffer = null;
+
+            if (_bloomBuffer != null)
+            {
+                _bloomBuffer.Clear();
+                _bloomBuffer.Release();
+                _bloomBuffer = null;
+            }
+
+            if (_layerBuffer != null)
+            {
+                _layerBuffer.Clear();
+                _layerBuffer.Release();
+                _layerBuffer = null;
+            }
         }
 
         private void RemoveSpecificCommandBuffer(Camera camera, CameraEvent evt, string bufferName)
@@ -194,7 +206,7 @@ namespace HoyoToon
             CommandBuffer[] buffers = camera.GetCommandBuffers(evt);
             for (int i = 0; i < buffers.Length; i++)
             {
-                if (buffers[i].name == bufferName)
+                if (buffers[i] != null && buffers[i].name == bufferName)
                 {
                     camera.RemoveCommandBuffer(evt, buffers[i]);
                     buffers[i].Clear();
@@ -215,6 +227,9 @@ namespace HoyoToon
         {
             if (_camera == null || _bloomMaterial == null || targetTexture == null) return;
 
+            // Clear any existing commands to prevent memory leaks
+            _bloomBuffer.Clear();
+
             // Set up render texture IDs
             int _OriginalID = Shader.PropertyToID("_OriginalTexture");
             int _HDRID = Shader.PropertyToID("_HDRTexture");
@@ -230,58 +245,63 @@ namespace HoyoToon
             int _MHYBloomTexID = Shader.PropertyToID("_MHYBloomTex");
             int _FinalImageID = Shader.PropertyToID("_FinalImage");
 
-            // Calculate downsampled texture sizes
-            int width = Mathf.RoundToInt(_camera.pixelWidth * 0.25f);
-            int height = Mathf.RoundToInt(_camera.pixelHeight * 0.25f);
+            try
+            {
+                // Calculate downsampled texture sizes
+                int width = Mathf.RoundToInt(_camera.pixelWidth * 0.25f);
+                int height = Mathf.RoundToInt(_camera.pixelHeight * 0.25f);
 
-            // Get temporary render textures
-            _bloomBuffer.GetTemporaryRT(_HDRID, _camera.pixelWidth, _camera.pixelHeight, 0, FilterMode.Bilinear, RenderTextureFormat.DefaultHDR);
-            _bloomBuffer.GetTemporaryRT(_OriginalID, _camera.pixelWidth, _camera.pixelHeight, 0, FilterMode.Bilinear, RenderTextureFormat.DefaultHDR);
-            _bloomBuffer.GetTemporaryRT(_PreFilterID, _camera.pixelWidth, _camera.pixelHeight, 0, FilterMode.Bilinear, RenderTextureFormat.DefaultHDR);
-            _bloomBuffer.GetTemporaryRT(_BloomHID, width, height, 0, FilterMode.Bilinear, RenderTextureFormat.DefaultHDR);
-            _bloomBuffer.GetTemporaryRT(_BloomVID, width, height, 0, FilterMode.Bilinear, RenderTextureFormat.DefaultHDR);
-            _bloomBuffer.GetTemporaryRT(_BloomAHID, 152, 158, 0, FilterMode.Bilinear, RenderTextureFormat.DefaultHDR);
-            _bloomBuffer.GetTemporaryRT(_BloomAVID, 152, 158, 0, FilterMode.Bilinear, RenderTextureFormat.DefaultHDR);
-            _bloomBuffer.GetTemporaryRT(_BloomBHID, 152, 158, 0, FilterMode.Bilinear, RenderTextureFormat.DefaultHDR);
-            _bloomBuffer.GetTemporaryRT(_BloomBVID, 152, 158, 0, FilterMode.Bilinear, RenderTextureFormat.DefaultHDR);
-            _bloomBuffer.GetTemporaryRT(_BloomCHID, 152, 158, 0, FilterMode.Bilinear, RenderTextureFormat.DefaultHDR);
-            _bloomBuffer.GetTemporaryRT(_BloomCVID, 152, 158, 0, FilterMode.Bilinear, RenderTextureFormat.DefaultHDR);
-            _bloomBuffer.GetTemporaryRT(_MHYBloomTexID, _camera.pixelWidth, _camera.pixelHeight, 0, FilterMode.Bilinear, RenderTextureFormat.DefaultHDR);
-            _bloomBuffer.GetTemporaryRT(_FinalImageID, _camera.pixelWidth, _camera.pixelHeight, 0, FilterMode.Bilinear, RenderTextureFormat.DefaultHDR);
+                // Get temporary render textures
+                _bloomBuffer.GetTemporaryRT(_HDRID, _camera.pixelWidth, _camera.pixelHeight, 0, FilterMode.Bilinear, RenderTextureFormat.DefaultHDR);
+                _bloomBuffer.GetTemporaryRT(_OriginalID, _camera.pixelWidth, _camera.pixelHeight, 0, FilterMode.Bilinear, RenderTextureFormat.DefaultHDR);
+                _bloomBuffer.GetTemporaryRT(_PreFilterID, _camera.pixelWidth, _camera.pixelHeight, 0, FilterMode.Bilinear, RenderTextureFormat.DefaultHDR);
+                _bloomBuffer.GetTemporaryRT(_BloomHID, width, height, 0, FilterMode.Bilinear, RenderTextureFormat.DefaultHDR);
+                _bloomBuffer.GetTemporaryRT(_BloomVID, width, height, 0, FilterMode.Bilinear, RenderTextureFormat.DefaultHDR);
+                _bloomBuffer.GetTemporaryRT(_BloomAHID, 152, 158, 0, FilterMode.Bilinear, RenderTextureFormat.DefaultHDR);
+                _bloomBuffer.GetTemporaryRT(_BloomAVID, 152, 158, 0, FilterMode.Bilinear, RenderTextureFormat.DefaultHDR);
+                _bloomBuffer.GetTemporaryRT(_BloomBHID, 152, 158, 0, FilterMode.Bilinear, RenderTextureFormat.DefaultHDR);
+                _bloomBuffer.GetTemporaryRT(_BloomBVID, 152, 158, 0, FilterMode.Bilinear, RenderTextureFormat.DefaultHDR);
+                _bloomBuffer.GetTemporaryRT(_BloomCHID, 152, 158, 0, FilterMode.Bilinear, RenderTextureFormat.DefaultHDR);
+                _bloomBuffer.GetTemporaryRT(_BloomCVID, 152, 158, 0, FilterMode.Bilinear, RenderTextureFormat.DefaultHDR);
+                _bloomBuffer.GetTemporaryRT(_MHYBloomTexID, _camera.pixelWidth, _camera.pixelHeight, 0, FilterMode.Bilinear, RenderTextureFormat.DefaultHDR);
+                _bloomBuffer.GetTemporaryRT(_FinalImageID, _camera.pixelWidth, _camera.pixelHeight, 0, FilterMode.Bilinear, RenderTextureFormat.DefaultHDR);
 
-            // Set the layer texture
-            _bloomMaterial.SetTexture("_LayerTex", targetTexture);
+                // Set the layer texture
+                _bloomMaterial.SetTexture("_LayerTex", targetTexture);
 
-            // Blit images to render textures
-            _bloomBuffer.Blit(BuiltinRenderTextureType.CameraTarget, _HDRID);
-            _bloomBuffer.Blit(BuiltinRenderTextureType.CameraTarget, _OriginalID);
-            _bloomBuffer.Blit(_OriginalID, _PreFilterID, _bloomMaterial, 1);
-            _bloomBuffer.Blit(_PreFilterID, _BloomHID, _bloomMaterial, 2);
-            _bloomBuffer.Blit(_BloomHID, _BloomVID, _bloomMaterial, 3);
-            _bloomBuffer.Blit(_BloomVID, _BloomAHID, _bloomMaterial, 4);
-            _bloomBuffer.Blit(_BloomAHID, _BloomAVID, _bloomMaterial, 5);
-            _bloomBuffer.Blit(_BloomAVID, _BloomBHID, _bloomMaterial, 6);
-            _bloomBuffer.Blit(_BloomBHID, _BloomBVID, _bloomMaterial, 7);
-            _bloomBuffer.Blit(_BloomBVID, _BloomCHID, _bloomMaterial, 8);
-            _bloomBuffer.Blit(_BloomCHID, _BloomCVID, _bloomMaterial, 9);
-            _bloomBuffer.Blit(_BloomCVID, _MHYBloomTexID, _bloomMaterial, 10);
-            _bloomBuffer.Blit(_MHYBloomTexID, _FinalImageID, _bloomMaterial, 11);
-            _bloomBuffer.Blit(_FinalImageID, BuiltinRenderTextureType.CameraTarget, _bloomMaterial, 11);
-
-            // Release temporary render textures
-            _bloomBuffer.ReleaseTemporaryRT(_HDRID);
-            _bloomBuffer.ReleaseTemporaryRT(_OriginalID);
-            _bloomBuffer.ReleaseTemporaryRT(_PreFilterID);
-            _bloomBuffer.ReleaseTemporaryRT(_BloomHID);
-            _bloomBuffer.ReleaseTemporaryRT(_BloomVID);
-            _bloomBuffer.ReleaseTemporaryRT(_BloomAHID);
-            _bloomBuffer.ReleaseTemporaryRT(_BloomAVID);
-            _bloomBuffer.ReleaseTemporaryRT(_BloomBHID);
-            _bloomBuffer.ReleaseTemporaryRT(_BloomBVID);
-            _bloomBuffer.ReleaseTemporaryRT(_BloomCHID);
-            _bloomBuffer.ReleaseTemporaryRT(_BloomCVID);
-            _bloomBuffer.ReleaseTemporaryRT(_MHYBloomTexID);
-            _bloomBuffer.ReleaseTemporaryRT(_FinalImageID);
+                // Blit images to render textures
+                _bloomBuffer.Blit(BuiltinRenderTextureType.CameraTarget, _HDRID);
+                _bloomBuffer.Blit(BuiltinRenderTextureType.CameraTarget, _OriginalID);
+                _bloomBuffer.Blit(_OriginalID, _PreFilterID, _bloomMaterial, 1);
+                _bloomBuffer.Blit(_PreFilterID, _BloomHID, _bloomMaterial, 2);
+                _bloomBuffer.Blit(_BloomHID, _BloomVID, _bloomMaterial, 3);
+                _bloomBuffer.Blit(_BloomVID, _BloomAHID, _bloomMaterial, 4);
+                _bloomBuffer.Blit(_BloomAHID, _BloomAVID, _bloomMaterial, 5);
+                _bloomBuffer.Blit(_BloomAVID, _BloomBHID, _bloomMaterial, 6);
+                _bloomBuffer.Blit(_BloomBHID, _BloomBVID, _bloomMaterial, 7);
+                _bloomBuffer.Blit(_BloomBVID, _BloomCHID, _bloomMaterial, 8);
+                _bloomBuffer.Blit(_BloomCHID, _BloomCVID, _bloomMaterial, 9);
+                _bloomBuffer.Blit(_BloomCVID, _MHYBloomTexID, _bloomMaterial, 10);
+                _bloomBuffer.Blit(_MHYBloomTexID, _FinalImageID, _bloomMaterial, 11);
+                _bloomBuffer.Blit(_FinalImageID, BuiltinRenderTextureType.CameraTarget, _bloomMaterial, 11);
+            }
+            finally
+            {
+                // Release temporary render textures - ensure this happens even if an error occurs
+                _bloomBuffer.ReleaseTemporaryRT(_HDRID);
+                _bloomBuffer.ReleaseTemporaryRT(_OriginalID);
+                _bloomBuffer.ReleaseTemporaryRT(_PreFilterID);
+                _bloomBuffer.ReleaseTemporaryRT(_BloomHID);
+                _bloomBuffer.ReleaseTemporaryRT(_BloomVID);
+                _bloomBuffer.ReleaseTemporaryRT(_BloomAHID);
+                _bloomBuffer.ReleaseTemporaryRT(_BloomAVID);
+                _bloomBuffer.ReleaseTemporaryRT(_BloomBHID);
+                _bloomBuffer.ReleaseTemporaryRT(_BloomBVID);
+                _bloomBuffer.ReleaseTemporaryRT(_BloomCHID);
+                _bloomBuffer.ReleaseTemporaryRT(_BloomCVID);
+                _bloomBuffer.ReleaseTemporaryRT(_MHYBloomTexID);
+                _bloomBuffer.ReleaseTemporaryRT(_FinalImageID);
+            }
 
             // Add command buffer to camera
             _camera.AddCommandBuffer(CameraEvent.BeforeImageEffects, _bloomBuffer);
