@@ -210,6 +210,9 @@
         "_UseFaceMapNew": 1,
         "_UseSelfShadow": 0
       },
+      "Hair": {
+        "_ToggleEyeGlow": 1.0
+      },
       "Equip": {
         "variant_selector": 2,
         "_UseWeapon": 1
