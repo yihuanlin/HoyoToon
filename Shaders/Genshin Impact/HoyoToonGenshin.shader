@@ -425,7 +425,7 @@ Shader "HoyoToon/Genshin/Character"
                 [HideInInspector] end_glowcolor("", Float) = 0
                 // Force Eye Glow
                 [HideInInspector] start_eyeemission("Eye Emission--{reference_property:_ToggleEyeGlow}", Float) = 0
-                    [Toggle] _ToggleEyeGlow ("Enable Eye Glow", Float) = 1.0
+                    [Toggle] _ToggleEyeGlow ("Enable Eye Glow", Float) = 0.0
                 
                     _EyeGlowStrength ("Eye Glow Strength", Float) = 0.5
                     _EyeTimeOffset ("Eye Glow Timing Offset", Range(0.0, 1.0)) = 0.1
