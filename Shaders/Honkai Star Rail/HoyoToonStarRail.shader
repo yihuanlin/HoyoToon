@@ -95,6 +95,7 @@ Shader "HoyoToon/Star Rail/Character"
         [HideInInspector] start_faceshading("Face--{condition_show:{type:PROPERTY_BOOL,data:_FaceMaterial==1.0}}", Float) = 0
             [SmallTexture] _FaceMap ("Face Map Texture", 2D) = "white" {}
             [SmallTexture] _FaceExpression ("Face Expression map", 2D) = "black" {}
+            _FaceSoftness ("Face Shading Softness", Range(0, 1)) = 0.0001
             _NoseLineColor ("Nose Line Color", Color) = (1, 1, 1, 1)
             _NoseLinePower ("Nose Line Power", Range(0, 8)) = 1
             [HideInInspector] start_faceexpression("Face Expression", Float) = 0
@@ -388,59 +389,123 @@ Shader "HoyoToon/Star Rail/Character"
             //endex
             //ifex _DissoveONM == 0
             [HideInInspector] start_dissolve("Dissolve--{reference_property:_DissoveONM}", Float) = 0
-                [Toggle] _DissoveONM ("Enable Dissolve", Float) = 0.0
-                [Enum(Off, 0, Simple, 1, Advanced, 2)] _DissolveMode ("Dissolve Mode--{condition_show:{type:PROPERTY_BOOL,data:_DissoveONM==1.0}}", Float) = 0
-                [Toggle] _DissolveClip ("Enable Dissolve Clip--{condition_show:{type:PROPERTY_BOOL,data:_DissolveMode==2.0}}", Float) = 0.0
-                _DissolveRateM ("Dissolve Rate--{condition_show:{type:PROPERTY_BOOL,data:_DissolveMode==2.0}}", Range(0.0, 1.0)) = 0.0
-                _DissolveMap ("Distortion Map--{condition_show:{type:PROPERTY_BOOL,data:_DissolveMode==2.0}}", 2D) = "white" { }
-                _DissolveMask ("Dissolve Mask--{condition_show:{type:PROPERTY_BOOL,data:_DissolveMode==2.0}}", 2D) = "white" { }
-                [Toggle] _InvertDissovle ("Invert Dissolve Mask--{condition_show:{type:PROPERTY_BOOL,data:_DissolveMode==2.0}}", Float) = 0.0
-                _DistortionSTM ("Distortion Scale/Offset--{condition_show:{type:PROPERTY_BOOL,data:_DissolveMode==2.0}}", Vector) = (2.0, 2.0, 0.0, 0.0)
-                _DissolveSMT ("Dissolve Map Scale/Offset--{condition_show:{type:PROPERTY_BOOL,data:_DissolveMode==2.0}}", Vector) = (2.0, 2.0, 0.0, 0.0)
-                _DissolveDistortionIntensityM ("Distortion Intensity--{condition_show:{type:PROPERTY_BOOL,data:_DissolveMode==2.0}}", Float) = 0.5
-                _DissolveMapAddM ("Dissolve Map Threshold Offset--{condition_show:{type:PROPERTY_BOOL,data:_DissolveMode==2.0}}", Float) = 0.83
-                _DissolveUVM ("Dissolve UV Offset--{condition_show:{type:PROPERTY_BOOL,data:_DissolveMode==2.0}}", Range(0.0, 1.0)) = 0.0
-                _DissolveUVSpeedM ("Dissolve UV Speed--{condition_show:{type:PROPERTY_BOOL,data:_DissolveMode==2.0}}", Vector) = (0.0, 0.1, 0.0, -0.1)
-                _DissolveComponentM ("Mask Channel Selector--{condition_show:{type:PROPERTY_BOOL,data:_DissolveMode==2.0}}", Vector) = (1.0, 1.0, 0.0, 0)
-                [HideInInspector]start_disposition("Dissolve Position & Offsets--{condition_show:{type:PROPERTY_BOOL,data:_DissolveMode==2.0}}", Float) = 0
-                    _DissoveDirecMaskM ("Dissolve Mask Direction", Float) = -0.36
-                    _DissolvePosMaskPosM ("Dissolve Mask Position", Vector) = (1.0, 0.0, 0.0, 1.0)
-                    [Toggle]_DissolvePosMaskWorldONM ("Dissolve Mask World Position", Float) = 1
-                    [Toggle]_DissolvePosMaskGlobalOnM("Dissolve Position Mask Global Toggle", Float) = 1
-                    _DissolvePosMaskRootOffsetM ("Dissolve Position Mask Root Offset", Vector) = (0.0, 1.0, 0.0, 0.0)
-                    [Toggle]_DissolvePosMaskFilpOnM ("Dissolve Position Mask Flip", Float) = 0.0
-                    [Toggle]_DissolvePosMaskOnM ("Dissolve Position Mask On", Float) = 1.0
-                [HideInInspector]end_disposition("", Float) = 0
-                [HideInInspector] start_disoutline("Dissolve Border--{condition_show:{type:PROPERTY_BOOL,data:_DissolveMode==2.0}}", Float) = 0
-                    [HDR] _DissolveOutlineColor1M (" Dissolve Outline Color 1", Color) = (0.466358513, 3.10380745, 4.24164248, 1.0)
-                    [HDR] _DissolveOutlineColor2M ("Dissolve Outline Color 2", Color) = (0.0, 0.0, 0.0, 0.0)
-                    _DissolveOutlineSize1M ("Dissolve Outline Size 1", Float) = 0.02
-                    _DissolveOutlineSize2M ("Dissolve Outline Size 2", Float) = -0.02
-                    _DissolveOutlineSmoothStepM ("Dissolve Outline Smoothstep ", Vector) = (0.0, 0.0, 0.0, 0.0)
-                    _DissolveOutlineOffsetM ("Dissolve Outline Offset", Float) = 1.0
-                [HideInInspector] end_disoutline("", Float) = 0.0
-        
-                // simple dissolve options
-                _DissolveSimpleRate ("Dissolve Rate--{condition_show:{type:PROPERTY_BOOL,data:_DissolveMode==1.0}}", Range(0.0, 1.0)) = 0.0
-                [Toggle] _SimpleDissolveClip ("Enable Dissolve Clip--{condition_show:{type:PROPERTY_BOOL,data:_DissolveMode==1.0}}", Float) = 0.0
-                _DissolveClipRate ("Dissolve Clip Rate--{condition_show:{type:PROPERTY_BOOL,data:_DissolveMode==1.0}}", Range(0.0, 1.0)) = 0.0
-                [Enum(UV0, 0, UV1, 1, UV2, 2)] _DissolveUVChannel ("Dissolve UV Channel--{condition_show:{type:PROPERTY_BOOL,data:_DissolveMode==1.0}}", Float) = 0
-                [Toggle] _DisableDissolveGradient ("Disable Dissolve Gradient--{condition_show:{type:PROPERTY_BOOL,data:_DissolveMode==1.0}}", Float) = 0.0
-                [Toggle] _InvertGradient ("Invert Dissolve Gradient--{condition_show:{type:PROPERTY_BOOL,data:_DissolveMode==1.0}}", Float) = 0.0
-                _DissolveGradientMask ("Dissolve Gradient Mask--{condition_show:{type:PROPERTY_BOOL,data:_DissolveMode==1.0}}", 2D) = "white" {}
-                _DissolveAnimTex ("Dissolve Distortion Texture--{condition_show:{type:PROPERTY_BOOL,data:_DissolveMode==1.0}}", 2D) = "white" {}	
-                _DissolveAnimSO ("Dissolve Distortion Scale|Offset--{condition_show:{type:PROPERTY_BOOL,data:_DissolveMode==1.0}}", Vector) = (1.0, 1.0, 0.0, 0.0)
-                _DissolveAnimSpeed ("Dissolve Distortion Speed--{condition_show:{type:PROPERTY_BOOL,data:_DissolveMode==1.0}}", Range(-5.00, 5.00)) = 1.0
-                _DissolveGradientOffset ("Dissolve Gradient Offset--{condition_show:{type:PROPERTY_BOOL,data:_DissolveMode==1.0}}", Float) = 0.0
-                _DissolveAnimDirection ("Dissolve Distortion Direction | XY --{condition_show:{type:PROPERTY_BOOL,data:_DissolveMode==1.0}}", Vector) = (0.0, 0.0, 0.0, 0.0)
-                _DissovleFadeSmoothstep ("Dissolve Fade Smoothstep | X = min | Y = max--{condition_show:{type:PROPERTY_BOOL,data:_DissolveMode==1.0}}", Vector) = (0.0, 1.0, 0.0, 0.0)		
-                [Toggle]_DissolveUsePosition ("Dissolve Use Position--{condition_show:{type:PROPERTY_BOOL,data:_DissolveMode==1.0}}", Float) = 0.0
-                [Toggle] _UseWorldPosDissolve ("Dissolve Use World Position--{condition_show:{type:AND,conditions:[{type:PROPERTY_BOOL,data:_DissolveMode==1.0},{type:PROPERTY_BOOL,data:_DissolveUsePosition==1.0}]}}", Float) = 0.0
-                _DissolveFadeDirection ("Dissolve Fade Direction | XYZ --{condition_show:{type:PROPERTY_BOOL,data:_DissolveMode==1.0}}", Vector) = (0.0, 0.0, 0.0, 0.0)
-                _DissovlePosFadeSmoothstep ("Dissolve Position Fade Smoothstep | X = min | Y = max--{condition_show:{type:PROPERTY_BOOL,data:_DissolveMode==1.0}}", Vector) = (0.0, 1.0, 0.0, 0.0)		
-
+                [Toggle] _DissoveON ("Enable Dissolve", Float) = 0
+                _DissolveRate ("Dissolve Rate", Range(0, 1)) = 0
+                _DissolveMap ("Dissolve Map", 2D) = "white" { }
+                _DissolveMask ("Mask Map", 2D) = "white" { }
+                _DissolveUV ("UV", Range(0, 1)) = 0
+                _DissolveUVSpeed ("UV Speed", Vector) = (0,0,0,0)
+                _DissolveST ("Dissolve ST", Vector) = (1,1,0,0)
+                _DistortionST ("Distortion ST", Vector) = (1,1,0,0)
+                _DissolveDistortionIntensity ("Distortion Intensity", Float) = 0.01
+                [HideInInspector] start_disspos ("Dissolve Position", Float) = 0
+                    [Toggle] _DissolveUseDirection ("Use Direction", Float) = 0
+                    _DissolveDiretcionXYZ ("Direction", Vector) = (0,0,0,0)
+                [HideInInspector] end_disspos ("", Float) = 0
+                [HideInInspector] start_dissolveoutline ("Dissolve Outline", Float) = 0
+                _DissolveOutlineSmoothStep ("Dissolve Outline Smoothstep", Vector) = (0,0,0,0)
+                    _DissolveOutlineSize1 ("Outline Size 1", Float) = 0.05
+                    _DissolveOutlineSize2 ("Outline Size 2", Float) = 0
+                    _DissolveOutlineOffset ("Outline Offset", Float) = 0
+                    _DissolveOutlineColor1 ("Outline Color 1", Color) = (1,1,1,1)
+                    _DissolveOutlineColor2 ("Outline Color 2", Color) = (0,0,0,0)
+                [HideInInspector] end_dissolveoutline ("", Float) = 0
+                [HideInInspector] start_directionmask ("Direction mask", Float) = 0
+                    _DissoveDirecMask ("Dissolve Direction Mask", Float) = 2
+                    _DissolveMapAdd ("Dissolve Map Additive", Float) = 0
+                    _DissolveComponent ("MaskChannel RGBA=0/1", Vector) = (1,0,0,0)
+                    _ES_EffCustomLightPosition ("Custom Light Position", Vector) = (1,0,0,1)
+                [HideInInspector] end_directionmask ("", Float) = 0
+                [HideInInspector] start_dissolvemask ("Dissolve Position Mask", Float) = 0
+                    [Toggle] _DissolvePosMaskOn ("Enable Position Mask", Float) = 0
+                    [Toggle] _DissolvePosMaskFilpOn ("Flip Mask", Float) = 0
+                    [Toggle] _UseWorldPosDissolve ("Use World Position", Float) = 0
+                    [Toggle] _DissolvePosMaskWorldON ("Enable World Space Position Mask", Float) = 0
+                    _DissolvePosMaskPos ("Mask Position", Vector) = (1,0,0,1)
+                    _DissolvePosMaskRootOffset ("Position Mask Offset", Vector) = (0,0,0,0)
+                [HideInInspector] end_dissolvemask ("", Float) = 0
             [HideInInspector] end_dissolve("", Float) = 0
             //endex
+
+
+            // this is the effect that appears on a model when theyre in the character details menu
+            [HideInInspector] start_heightfog("Height Light", Float) = 0
+                // this is entirely scripted
+                [Toggle] _UseHeightLerp ("Enable Height Light", Float) = 0
+                _CharaWorldSpaceOffset ("World Space Offset", Float) = 0
+                _ES_HeightLerpBottom ("Height Bottom", Float) = 0
+                _ES_HeightLerpTop ("Height Top", Float) = 1
+                [HideInInspector] start_heightcolors("", Float) = 0
+                    [HDR] _ES_HeightLerpBottomColor ("Light Bottom Color", Color) = (1,1,1,1)
+                    [HDR] _ES_HeightLerpMiddleColor ("Light Middle Color", Color) = (1,1,1,1)
+                    [HDR] _ES_HeightLerpTopColor ("Light Top Color", Color) = (1,1,1,1)
+                [HideInInspector] end_heightcolors("", Float) = 0
+            [HideInInspector] end_heightfog("", Float) = 0
+
+            // this isnt anywhere near actually useable, This needs to be iterated on more.
+            //ifex _EnableParticleSwirl == 0
+            // [HideInInspector] start_particleswirl ("SwirlDissolve", Float) = 0
+
+            //     [Toggle] _EnableParticleSwirl("Enable Swirl Dissolve", Float) = 0
+            //     [KeywordEnum(R,RGBA,RA)] _CL ("Channel Mapping", Float) = 0
+            //     _MainChannel ("MainChannelA      RGB+W=0/1 ", Vector) = (1,0,0,1)
+            //     _MainChannelRGB ("MainChannelRGB  RGB=0/1 ", Vector) = (1,0,0,0)
+            //     // _MainTex ("MainTex", 2D) = "white" { }
+            //     _MainSpeed ("MainSpeed  intensity* +", Vector) = (0,0,1,0)
+            //     _Opacity ("Opacity", Range(0, 1)) = 1
+            //     _DisStep ("DisStep             Y=OutEdge", Vector) = (1.1,0,0,0)
+            //     [HDR] _InsideColor ("InsideColor", Color) = (1,1,1,0)
+            //     [HDR] _OutSideColor ("OutSideColor", Color) = (1,1,1,0)
+            //     [Toggle(_MidColorON)] _Mid ("Mid", Float) = 0
+            //     [HDR] _MidColor ("MidColorRGB   a", Color) = (1,1,1,0.1)
+            //     _SmoothStep ("SmoothStep_xyz W=Midedge", Vector) = (0,0,0,0)
+            //     _DisTex ("DisTex  (r+b)*mask ", 2D) = "white" { }
+            //     _DisRSpeed ("Dis(R)Speed  rg+z", Vector) = (0,0,0,0)
+            //     [Toggle(_DisTexGON)] _DisTexG ("Dis(G)_Switch", Float) = 0
+            //     _DisGSpeed ("Dis(G)Speed  uv", Vector) = (0,0,1,1)
+            //     _MaskON ("MaskTex_Switch  /  OFF=UVramp  offset=0/1/2 ", Float) = 0
+            //     _MaskTex ("MaskTex", 2D) = "white" { }
+            //     _MaskChannel ("MaskChannel  RGB=0/1 A=MaskNoise", Vector) = (1,0,0,0)
+            //     _MaskChannelA ("MaskChannel Alpha", Float) = 0
+            //     [Toggle] _MaskTransparency ("Mask Transparency", Float) = 0
+            //     _MaskTransparencyChannel ("Mask Transparency Channel", Vector) = (0,0,0,1)
+            //     [Toggle(_Noise)] _NoiseSwitch ("NoiseTex_Switch", Float) = 0
+            //     _NoiseTex ("NoiseTex", 2D) = "white" { }
+            //     _NoiseSpeed ("NoiseSpeed  itensity", Vector) = (0,0,1,1)
+            //     _Disappear ("Disappear", Range(0, 1)) = 0
+            //     _SoftNear ("Soft Near", Range(-5, 5)) = 0
+            //     _SoftFar ("Soft Far", Range(-5, 5)) = 1
+            //     _ES_EP_EffectParticle ("Particle", Color) = (0,0,1,1)
+            //     _ES_EP_EffectParticleBottom ("Particle Bottom", float) = 1
+            //     _ES_EP_EffectParticleTop ("Particle Top", float) = 1
+            //     [Enum(AlphaBlend, 0, Additive, 1, Multiply, 2, OneChannel, 3, Opaque, 4)] _RenderingMode ("Rendering Mode", Float) = 0
+            
+            // [HideInInspector] end_particleswirl ("", Float) = 0
+            //endex
+
+            [HideInInspector] start_starrysky ("Starry Sky", Float) = 0
+                [Toggle] _StarrySky ("Use StarrySky", Float) = 0
+                [Toggle] _StarAffectedByLight ("Stars Affected By Lighting", Float) = 1
+                [Toggle] _StarsAreDiffuse ("Replace Color with Stars", Float) = 0
+                _StarMode ("Star Mode", Range(0, 1)) = 0
+                _SkyTex ("Base Texture", 2D) = "black" { }
+                _SkyMask ("Mask Texture", 2D) = "black" { }
+                _SkyRange ("Range", Range(-1, 3)) = 0
+                _SkyStarColor ("Star Color", Color) = (1,1,1,1)
+                _SkyStarTex ("Star Texture", 2D) = "black" { }
+                _SkyStarTexScale ("Star Texture Scale", Float) = 1
+                _SkyStarSpeed ("Star Speed(XY)", Vector) = (0,0,0,0)
+                _SkyStarDepthScale ("Star DepthScale", Float) = 1
+                _SkyStarMaskTex ("Star Mask Texture", 2D) = "whilte" { }
+                _SkyStarMaskTexScale ("Star Mask Texture Scale", Float) = 1
+                _SkyStarMaskTexSpeed ("Star Flicker Frequency", Range(0, 20)) = 0
+                _SkyFresnelColor ("Fresnel Color", Color) = (0,0,0,1)
+                _SkyFresnelBaise ("Fresnel Bias", Float) = 0
+                _SkyFresnelScale ("FresnelScale", Float) = 0
+                _SkyFresnelSmooth ("FresnelSmooth", Range(0, 0.5)) = 0
+                _OSScale ("Model Scale", Range(0, 30)) = 1
+                _StarDensity ("Star Density", Range(0, 1)) = 0.5
+            [HideInInspector] end_starrysky ("", Float) = 0
 
             //ifex _EnableHueShift == 0
             // Hue Controls

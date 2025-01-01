@@ -27,16 +27,10 @@ vs_out vs_base(vs_in v)
     o.vertex = v.vertex;
 
     #if defined(can_dissolve)
-    if(_DissoveONM && (_DissolveMode == 2.0))
-    {
-        dissolve_vertex(pos_ws, v.vertex, v.uv_1, v.uv_1, o.dis_pos, o.dis_uv);
-    } 
-    else if(_DissoveONM && (_DissolveMode == 1.0))
-    {
-        o.dis_uv = float4(v.uv_2, v.uv_3);
-        o.dis_pos = v.vertex; // local pos first 
-        if(_UseWorldPosDissolve) o.dis_pos = pos_ws; // world pos if needed
-    }
+        if(_DissoveON)
+        {
+            dissolve_vertex(v, o.dis_pos, o.dis_uv);
+        }
     #endif
 
     if(_FaceMaterial) o.normal = 0.5f;
@@ -150,15 +144,10 @@ vs_out vs_edge(vs_in v)
     o.ws_pos = mul(unity_ObjectToWorld, v.vertex);
     o.normal = mul((float3x3)unity_ObjectToWorld, v.normal);
 
-    if(_DissoveONM && (_DissolveMode == 2.0))
+
+    if(_DissoveON )
     {
-        dissolve_vertex(o.ws_pos, o.pos, v.uv_1, v.uv_1, o.dis_pos, o.dis_uv);
-    } 
-    else if(_DissoveONM && (_DissolveMode == 1.0))
-    {
-        o.dis_uv = float4(v.uv_2, v.uv_3);
-        o.dis_pos = v.vertex; // local pos first 
-        if(_UseWorldPosDissolve) o.dis_pos = o.ws_pos; // world pos if needed
+        dissolve_vertex(v, o.dis_pos, o.dis_uv);
     }
 
     return o;
@@ -176,15 +165,10 @@ shadow_out vs_shadow(shadow_in v)
     float4 pos_wvp = mul(UNITY_MATRIX_VP, pos_ws);
     o.pos = pos_wvp;
     o.uv_a = float4(v.uv_0.xy, v.uv_1.xy);
-    if(_DissoveONM && (_DissolveMode == 2.0))
+
+    if(_DissoveON )
     {
-        dissolve_vertex(pos_ws, v.vertex, v.uv_1, v.uv_1, o.dis_pos, o.dis_uv);
-    } 
-    else if(_DissoveONM && (_DissolveMode == 1.0))
-    {
-        o.dis_uv = float4(v.uv_2, (float2)0.0f);
-        o.dis_pos = v.vertex; // local pos first 
-        if(_UseWorldPosDissolve) o.dis_pos = o.ws_pos; // world pos if needed
+        dissolve_vertex(v, o.dis_pos, o.dis_uv);
     }
 
     TRANSFER_SHADOW_CASTER_NORMALOFFSET(o)
@@ -205,8 +189,6 @@ float4 ps_base(vs_out i, bool vface : SV_IsFrontFace) : SV_Target
     float testTresh =_AlphaTestThreshold;
     if(_IsTransparent) testTresh = 0.0f;
 
-    if(_DissoveONM && (_DissolveMode == 2.0)) dissolve_clip(ws_pos, i.dis_pos, i.dis_uv, i.uv.zw);
-
     // INITIALIZE VERTEX SHADER INPUTS : 
     float3 normal    = normalize(i.normal);
     float3 vs_normal = normalize(mul((float3x3)UNITY_MATRIX_V, normal));
@@ -221,7 +203,7 @@ float4 ps_base(vs_out i, bool vface : SV_IsFrontFace) : SV_Target
     float3 emission_color = (float3)0.0f;
     float emis_area = 0.0f;
     float3 test_normal = normal;
-
+    float3 tangents = i.tangent.xyz;
     // MATERIAL COLOR :
     float4 color = (_HairMaterial) ? _Color0 * _Color : _Color;
 
@@ -230,12 +212,16 @@ float4 ps_base(vs_out i, bool vface : SV_IsFrontFace) : SV_Target
         uv.xy = i.uv.zw;
         color = _BackColor;
         normal.z = normal.z * -1.0f;
+        tangents.z = tangents.z * -1.0f;
     }
 
     color.a = 1.0f; // this prevents issues with the alpha value of the material being less than 1
     // might remove later
 
-    
+    if(_DissoveON)
+    {
+        dissolve_clip(ws_pos, i.dis_pos, i.dis_uv, uv);
+    }
 
     // INITIALIZE OUTPUT COLOR : 
     float4 out_color = color;
@@ -266,6 +252,11 @@ float4 ps_base(vs_out i, bool vface : SV_IsFrontFace) : SV_Target
             diffuse = lerp(diffuse, secondary, _SecondaryFade);
         }
     #endif
+
+    // if(_StarrySky)
+    // {
+    //     diffuse = starry_sky(diffuse, uv);
+    // }
 
     #if defined(can_shift)
         float diffuse_mask = packed_channel_picker(sampler_linear_repeat, _HueMaskTexture, uv, _DiffuseMaskSource);
@@ -300,6 +291,10 @@ float4 ps_base(vs_out i, bool vface : SV_IsFrontFace) : SV_Target
         
 
     #if defined (_IS_PASS_BASE)
+        if(_EnableParticleSwirl)
+        {
+            swirl_dissolve(i, out_color);
+        }
         // lighting
         float3 GI_color = DecodeLightProbe(normal);
         GI_color = GI_color < float3(1,1,1) ? GI_color : float3(1,1,1);
@@ -698,7 +693,7 @@ float4 ps_base(vs_out i, bool vface : SV_IsFrontFace) : SV_Target
         #if defined(use_stocking)
             if(_EnableStocking) diffuse.xyz = stocking;
         #endif
-        out_color = out_color * diffuse;
+        out_color = (_StarrySky && !_FaceMaterial && !_HairMaterial) ? starry_sky(diffuse, out_color, uv) : out_color * diffuse;
         if(_EnableAlphaCutoff) clip(diffuse.w - saturate(testTresh));
         #if defined(use_shadow)
             out_color.xyz = (_EnableShadow == 1) ? out_color * shadow_color : out_color; 
@@ -715,8 +710,11 @@ float4 ps_base(vs_out i, bool vface : SV_IsFrontFace) : SV_Target
         #if defined(use_rimlight)
             if(!_FaceMaterial && _EnableRimLight) out_color.xyz = lerp(out_color.xyz.xyz - rim_light.xyz, out_color.xyz + rim_light.xyz, rim_values[curr_region].z);
         #endif
+        if(_StarrySky) out_color = starry_cloak(i.ss_pos, i.view, uv, i.ws_pos, tangents, out_color);
         if(!_IsTransparent && !_EnableAlphaCutoff) out_color.w = 1.0f;
         if(_EyeShadowMat) out_color = _Color;
+
+
         
  
         // intialize direction Vectors
@@ -765,10 +763,15 @@ float4 ps_base(vs_out i, bool vface : SV_IsFrontFace) : SV_Target
                 caus = pow(caus, _CausExp) * _CausColor * _CausInt;      
                 out_color.xyz = out_color.xyz + caus;
             }   
-        #endif
-        out_color.xyz = out_color.xyz * light_color;
-        out_color.xyz = out_color.xyz + (GI_color * GI_intensity * _GI_Intensity * smoothstep(1.0f ,0.0f, GI_intensity / 2.0f));
-
+        #endif 
+        float filter = 1.0f;
+        if(_StarrySky && !_StarAffectedByLight)
+        {
+            filter = saturate(1.0f - (_SkyMask.Sample(sampler_linear_repeat, uv * _SkyMask_ST.xy + _SkyMask_ST.zw).x + _SkyRange));
+        }
+        float3 light_applied_color = out_color.xyz * light_color;
+        light_applied_color.xyz = light_applied_color.xyz + (GI_color * GI_intensity * _GI_Intensity * smoothstep(1.0f ,0.0f, GI_intensity / 2.0f));
+        out_color.xyz = lerp(out_color.xyz, light_applied_color, filter);
         float shadow_mask = (dot(normal, light) * .5 + .5);
         shadow_mask = smoothstep(0.5, 0.7, shadow_mask);
         
@@ -782,6 +785,8 @@ float4 ps_base(vs_out i, bool vface : SV_IsFrontFace) : SV_Target
             out_color.xyz = lerp(saturate(_ShadowColor), 1.0f, mask);
             if(!_HairMaterial||!_UseSelfShadow) clip(-1);
         #endif
+
+        if(_UseHeightLerp) heightlightlerp(ws_pos, out_color);
 
 
         if(_DebugMode && (_DebugLights == 1)) out_color.xyz = 0.0f;
@@ -848,7 +853,6 @@ float4 ps_base(vs_out i, bool vface : SV_IsFrontFace) : SV_Target
                 float alpha_b  = saturate((1.0f - cosyz) / 0.293f);
                 float hair_blend = max(0.0, _HairBlendSilhouette);
                 hair_alpha = max(alpha_a, alpha_b);
-                // out_color.xyz = hair_alpha;
                 hair_alpha = (_UseHairSideFade) ? max(max(hair_alpha, hair_blend), 0.0f) : hair_blend;
                 
                 float side_mask = 1.0f;
@@ -976,25 +980,24 @@ float4 ps_base(vs_out i, bool vface : SV_IsFrontFace) : SV_Target
         } 
     #endif
     #if defined(can_dissolve)
-        if(_DissoveONM && (_DissolveMode == 2.0)) out_color.xyzw = dissolve_color(i.ws_pos, i.dis_pos, i.dis_uv, i.uv.zw, out_color);
-        if((_DissoveONM) && (_DissolveMode == 1.0f))
-        {
-            float alpha = 1.0f;
-            simple_dissolve(out_color.xyzw, i.uv.xy, i.uv.zw, i.dis_uv.xy, i.dis_pos, out_color.xyz, alpha);
-            clip(out_color.w - _DissolveClipRate);
-            out_color.w = out_color.w * alpha;
-
-        }
+    if(_DissoveON)
+    {
+        dissolve_color(ws_pos, i.dis_pos, i.dis_uv, uv, diffuse, out_color);
+    }
     #endif
     return out_color;
 }
 
 float4 ps_edge(vs_out i, bool vface : SV_IsFrontFace) : SV_Target
 {
+    float4 ws_pos = mul(unity_ObjectToWorld, i.ws_pos);
     float2 uv  = i.uv.xy;
 
     #if defined(can_dissolve)
-        if(_DissoveONM && (_DissolveMode == 2.0)) dissolve_clip(i.ws_pos, i.dis_pos, i.dis_uv, i.uv.xy);
+    if(_DissoveON)
+    {
+        dissolve_clip(ws_pos, i.dis_pos, i.dis_uv, uv);
+    }
     #endif
     float lightmap = _LightMap.Sample(sampler_linear_repeat, uv).w;
     float alpha = _MainTex.Sample(sampler_MainTex, uv).w;
@@ -1037,12 +1040,10 @@ float4 ps_edge(vs_out i, bool vface : SV_IsFrontFace) : SV_Target
     #endif
     out_color.xyz = out_color.xyz * light_color + GI_color;
     #if defined(can_dissolve)
-        if(_DissoveONM && (_DissolveMode == 2.0)) out_color.xyzw = dissolve_color(i.ws_pos, i.dis_pos, i.dis_uv, i.uv.xy, out_color);
-        if(_DissoveONM && (_DissolveMode == 1.0))
+        if(_DissoveON)
         {
-            simple_dissolve(out_color.xyzw, i.uv.xy, i.uv.zw, i.dis_uv.xy, i.dis_pos, out_color.xyz, out_color.a);
-            clip(out_color.a - (_DissolveClipRate + 0.1f));
-        } 
+            dissolve_color(ws_pos, i.dis_pos, i.dis_uv, uv, out_color, out_color); 
+        }
     #endif
     if(i.v_col.w < 0.05f) clip(-1); // discard all pixels with the a vertex color alpha value of less than 0.05f
     // this fixes double sided meshes for hsr having bad outlines
@@ -1053,6 +1054,8 @@ float4 ps_edge(vs_out i, bool vface : SV_IsFrontFace) : SV_Target
 
 float4 ps_shadow(shadow_out i, bool vface : SV_ISFRONTFACE) : SV_TARGET
 {
+    float4 ws_pos = mul(unity_ObjectToWorld, i.ws_pos);
+
     // initialize uv 
     float2 uv = (!vface) ? i.uv_a.zw : i.uv_a.xy;
     float testTresh = _AlphaTestThreshold;
@@ -1062,12 +1065,10 @@ float4 ps_shadow(shadow_out i, bool vface : SV_ISFRONTFACE) : SV_TARGET
     float4 out_color = (float4)0.0f;
 
     #if defined(can_dissolve)
-        if(_DissoveONM && (_DissolveMode == 2.0))
-        {
-            dissolve_clip(i.ws_pos, i.dis_pos, i.dis_uv, uv);
-            out_color.xyz = dissolve_color(i.ws_pos, i.dis_pos, i.dis_uv, uv, out_color);
-            out_color.xyz = (float3)0.0f;
-        }
+    if(_DissoveON)
+    {
+        dissolve_clip(ws_pos, i.dis_pos, i.dis_uv, uv);
+    }        
     #endif
     if(_EnableAlphaCutoff) clip(alpha - saturate(testTresh));
 

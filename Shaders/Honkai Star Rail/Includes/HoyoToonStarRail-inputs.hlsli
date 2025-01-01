@@ -31,11 +31,14 @@ struct vs_out
 
 struct shadow_in 
 {
-    float4 vertex : POSITION; 
-    float3 normal : NORMAL;
-    float2 uv_0 : TEXCOORD0;
-    float2 uv_1 : TEXCOORD1;
-    float2 uv_2 : TEXCOORD2;
+    float4 vertex  : POSITION;
+    float3 normal  : NORMAL;
+    float4 tangent : TANGENT;
+    float2 uv_0    : TEXCOORD0;
+    float2 uv_1    : TEXCOORD1;
+    float2 uv_2    : TEXCOORD2;
+    float2 uv_3    : TEXCOORD3;
+    float4 v_col   : COLOR0;
 };
 
 struct shadow_out
