@@ -453,7 +453,12 @@ float4 ps_model(vs_out i,  bool vface : SV_ISFRONTFACE) : SV_TARGET
     float4 diffuse = _MainTex.Sample(sampler_MainTex, uv_a);
     float4 lightmap = _LightMapTex.Sample(sampler_linear_repeat, uv_a);
     #if defined(use_shadow)
-        float customao  = _CustomAO.Sample(sampler_linear_repeat, uv_a);
+        float2 ao_uv[3] =
+        {
+            uv_a, i.uv_a.zw, i.ss_pos.xy/i.ss_pos.ww
+        };
+        float2 final_uv =  ao_uv[_CustomAOUV % 3] * _CustomAO_ST.xy + _CustomAO_ST.zw;
+        float customao  = _AOSamplerType == 0 ? _CustomAO.Sample(sampler_linear_repeat, final_uv).x : _CustomAO.Sample(sampler_linear_clamp, final_uv).x ; // loop through array if number is greater than 3 or less than 0
     #endif
     #if defined(use_bump)
         float4 normalmap = _BumpMap.Sample(sampler_linear_repeat, uv_a);
@@ -609,7 +614,14 @@ float4 ps_model(vs_out i,  bool vface : SV_ISFRONTFACE) : SV_TARGET
         if(_StarCloakEnable && _StarCockEmis) mask = 1.0f;
         if((_StarCloakEnable && _StarCockEmis) && (_StarCockType == 2) && (!emis_check)) mask = diffuse.w;
         emis_check = _TogglePulse ? emis_check * pulsate(_PulseSpeed, _PulseMinStrength, _PulseMaxStrength, 0.0f) : emis_check; 
-
+        #if defined(use_stockings)
+        if(_UseCharacterStockings && (material_id  == 4))
+        {
+            float stocking_area_check = 0;
+            character_stocking(normal, view, uv_a, material_id, stocking_area_check, diffuse);
+            return float4(diffuse.xyz, 1.0f);
+        }
+        #endif
 
         if(_UseFaceMapNew)
         {
@@ -710,7 +722,7 @@ float4 ps_model(vs_out i,  bool vface : SV_ISFRONTFACE) : SV_TARGET
                 emis_check = 1.0f;
             }
         #endif
-        
+                
 
         // New 5.0 content shit
         #if defined(parallax_glass)
@@ -758,6 +770,17 @@ float4 ps_model(vs_out i,  bool vface : SV_ISFRONTFACE) : SV_TARGET
             out_color.w = diffuse.w;      
             if(_EnableDithering) ditherClip(ws_pos.xy, out_color.w);
         }
+
+        #if defined(is_stencil)
+            if(_UseEyeStencil)
+            {
+                stencil_mask(i.ws_pos, out_color, lightmap, view);
+            }
+            else
+            {
+                discard;
+            }
+        #endif
         #if defined(can_debug)  
             if(_DebugMode) // debuuuuuug
             {

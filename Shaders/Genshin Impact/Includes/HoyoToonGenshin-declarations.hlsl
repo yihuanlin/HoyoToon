@@ -9,6 +9,7 @@ Texture2D _LightMapTex; // this is both the body/hair lightmap texture and the f
 #endif
 #if defined(use_shadow)
     Texture2D _CustomAO;
+    float4 _CustomAO_ST;
 #endif
 #if defined(use_bump)
     Texture2D _BumpMap;
@@ -49,6 +50,9 @@ Texture2D _CustomEmissionTex;
 #if defined(use_leather)
     Texture2D _LeatherReflect;
     Texture2D _LeatherLaserRamp;
+#endif
+#if defined(use_stockings)
+    Texture2D _StockingsDetailTex;
 #endif
 #if defined(parallax_glass)
     Texture2D _GlassSpecularTex;
@@ -91,6 +95,7 @@ Texture2D _ClipAlphaTex;
     Texture2D _HighlightMaskTex2;
     float4 _HighlightMaskTex2_ST;
 #endif
+
 
 Texture2D _FakePointNoiseTex;
 Texture2D _FakePointNoiseTex2;
@@ -172,9 +177,11 @@ float _FaceBlushStrength;
 float3 _FaceBlushColor;
 float3 _headForwardVector;
 float3 _headRightVector;
+float3 _headUpVector;
 float _FaceMapSoftness;
 float _FaceMapRotateOffset;
 float _UseFaceMapNew;
+float _UseFaceBlueAsAO;
 
 // weapon properties
 float _UseWeapon;
@@ -252,6 +259,8 @@ float4 _CoolShadowMultColor3;
 float4 _CoolShadowMultColor4;
 float4 _CoolShadowMultColor5;
 float _CustomAOEnable;
+float _CustomAOUV;
+float _AOSamplerType;
 
 // metal properties : 
 float _MetalMaterial;
@@ -310,6 +319,46 @@ float4 _LeatherSpecularDetailColor;
 float _LeatherSpecularDetailRange;
 float _LeatherSpecularDetailScale;
 float _LeatherSpecularDetailSharpe;
+
+// stockings :
+float _UseCharacterStockings;
+float _StockingCenterX;
+float _StockingCenterY;
+float4 _StockingDecalColor;
+float _StockingDecalIntensity;
+float _StockingDecalScale;
+float4 _StockingShiningColor;
+float _StockingShiningColorBlend;
+float _StockingShiningDensity;
+float _StockingShiningFrequencncy;
+float _StockingShiningIntensity;
+float _StockingShiningSize;
+float _StockingShiningTiling;
+float4 _StockingsDetailPattenColor;
+float _StockingsDetailPattenScale;
+float _StockingsDetailPattenTiling;
+float _StockingsDetailScale;
+float _StockingsDetailTilingFar;
+float _StockingsDetailTilingNear;
+float4 _StockingsLightColor;
+float4 _StockingsShadowColor;
+float _StockingsLightRange;
+float _StockingsLightScale;
+float _StockingsLightScaleInShadow;
+float _StockingsShadowRange;
+float4 _StockingsSpecularColor;
+float4 _StockingsSpecularDetailColor;
+float _StockingsSpecularDetailRange;
+float _StockingsSpecularDetailScale;
+float _StockingsSpecularDetailSharpe;
+float _StockingsSpecularDistance;
+float _StockingsSpecularFade;
+float _StockingsSpecularRange;
+float _StockingsSpecularScale;
+float _StockingsSpecularSharpe;
+float _StockingsSpecularShift;
+float _StockingsTilingDistance;
+float _StockingsWHite;
 
 // rim light properties :
 float _RimLightType;
@@ -679,6 +728,13 @@ float _FakePointFrequency3;
 float _FakePointFrequencyMin3;
 float _FakePointSkinIntensity3;
 float _FakePointSkinSaturate3;
+
+float _UseEyeStencil;
+float _HairZOffset;
+float _StencilType;
+float _StencilFilter;
+float _HairBlendUse;
+float _HairBlendSilhouette;
 
 uniform float _GI_Intensity;
 uniform float4x4 _LightMatrix0;

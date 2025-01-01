@@ -37,6 +37,12 @@ Shader "HoyoToon/Genshin/Character"
             // on by default >:(
             [Toggle] _MainTexColoring("Enable Material Tinting", Float) = 0
             [Toggle] _DisableColors("Disable Material Colors", Float) = 0    
+
+            [HideInInspector] start_facingvector ("Facing Vectors", Float) = 0
+                _headUpVector ("Up Vector | XYZ", Vector) = (0, 1, 0, 0)
+                _headForwardVector ("Forward Vector | XYZ", Vector) = (0, 0, 1, 0)
+                _headRightVector ("Right Vector | XYZ", Vector) = (-1, 0, 0, 0)
+            [HideInInspector] end_facingvector("", Float) = 0
             // Main Color Tinting
             [HideInInspector] start_maincolor ("Color Options", Float) = 0
                 // Color Mask
@@ -111,8 +117,8 @@ Shader "HoyoToon/Genshin/Character"
             [SmallTexture] _FaceMapTex ("Face Shadow",2D)= "white"{ }
             [HideInInspector] _UseFaceMapNew ("Enable Face Shader", Float) = 0.0
             _FaceMapSoftness ("Face Lighting Softness", Range(0.0, 1.0)) = 0.001
-            _headForwardVector ("Forward Vector | XYZ", Vector) = (0, 0, 1, 0)
-            _headRightVector ("Right Vector | XYZ", Vector) = (-1, 0, 0, 0)
+
+            [Toggle] _UseFaceBlueAsAO ("Use LightMap Blue Channel as AO", Float) = 0.0            
             // Face Bloom
             [HideInInspector] start_faceblush ("Blush", Float) = 0
                 _FaceBlushStrength ("Face Blush Strength", Range(0.0, 1.0)) = 0.0
@@ -193,6 +199,8 @@ Shader "HoyoToon/Genshin/Character"
                 _ShadowRampWidth ("Ramp Width", Range(0.2, 3.0)) = 1.0
                 [Toggle] _CustomAOEnable ("Enable Custom AO", Float) = 0	
                 [SmallTexture]_CustomAO ("Custom AO Texture--{condition_show:{type:PROPERTY_BOOL,data:_CustomAOEnable==1.0}}",2D)= "white"{ }
+                [Enum(Repeat, 0, Clamp, 1)] _AOSamplerType ("Custom AO Sampler Type--{condition_show:{type:PROPERTY_BOOL,data:_CustomAOEnable==1.0}}", Int) = 0
+                [Enum(UV0, 0, UV1, 1, ScreenSpaceUVs, 2)] _CustomAOUV ("Custom AO UV--{condition_show:{type:PROPERTY_BOOL,data:_CustomAOEnable==1.0}}", Int) = 0
                 // Shadow Transition
                 [HideInInspector] start_shadowtransitions("Shadow Transitions--{reference_property:_UseShadowTransition}", Float) = 0
                     [Toggle] _UseShadowTransition ("Use Shadow Transition (only work when shadow ramp is off)", Float) = 0
@@ -351,6 +359,60 @@ Shader "HoyoToon/Genshin/Character"
                 [HideInInspector] end_leatherdetail ("Detail", Float) = 0
             [HideInInspector] end_leather("", Float) = 0
             //endex
+
+            // //ifex _UseCharacterStockings == 0
+            // [HideInInspector] start_stocking("Stocking--{reference_property:_UseCharacterStockings}", Float) = 0
+            //         [Toggle] _UseCharacterStockings ("Enable Stocking", Float) = 0
+            //         _StockingsDetailTex ("Stocking Detail Texture", 2D) = "grey" {}
+            //         _StockingCenterX ("Stocking Center X", Float) = 0.5
+            //         _StockingCenterY ("Stocking Center Y", Float) = 0.5
+            //     [HideInInspector] start_stockdecal ("Decal Settings", Float) = 0
+            //         _StockingDecalColor ("Decal Color", Color) = (1,1,1,1)
+            //         _StockingDecalIntensity ("Decal Intensity", Float) = 1
+            //         _StockingDecalScale ("Decal Scale", Float) = 1
+            //     [HideInInspector] end_stockdecal ("Decal Settings", Float) = 0
+            //     [HideInInspector] start_stockshine ("Shine Settings", Float) = 0
+            //         _StockingShiningColor ("Shining Color", Color) = (1,1,1,1)
+            //         _StockingShiningColorBlend ("Shining Color Blend", Float) = 0.5
+            //         _StockingShiningDensity ("Shining Density", Float) = 0.5
+            //         _StockingShiningFrequencncy ("Shining Frequency", Float) = 0.5
+            //         _StockingShiningIntensity ("Shining Intensity", Float) = 0.5
+            //         _StockingShiningSize ("Shining Size", Float) = 0.5
+            //         _StockingShiningTiling ("Shining Tiling", Float) = 0.5
+            //     [HideInInspector] end_stockshine ("Shine Settings", Float) = 0
+            //     [HideInInspector] start_stockdetail ("Detail Settings", Float) = 0
+            //         _StockingsDetailPattenColor ("Detail Patten Color", Color) = (1,1,1,1)
+            //         _StockingsDetailPattenScale ("Detail Patten Scale", Float) = 1
+            //         _StockingsDetailPattenTiling ("Detail Patten Tiling", Float) = 1
+            //         _StockingsDetailScale ("Detail Scale", Float) = 1
+            //         _StockingsDetailTilingFar ("Detail Tiling Far", Float) = 1
+            //         _StockingsDetailTilingNear ("Detail Tiling Near", Float) = 1
+            //     [HideInInspector] end_stockdetail ("Detail Settings", Float) = 0
+            //     [HideInInspector] start_stocklighting("Lighting Settings", Float) = 0
+            //         _StockingsLightColor ("Light Color", Color) = (1,1,1,1)
+            //         _StockingsShadowColor ("Shadow Color", Color) = (0,0,0,1)
+            //         _StockingsLightRange ("Light Range", Float) = 1
+            //         _StockingsLightScale ("Light Scale", Float) = 1
+            //         _StockingsLightScaleInShadow ("Light Scale In Shadow", Float) = 1
+            //         _StockingsShadowRange ("Shadow Range", Float) = 1
+            //     [HideInInspector] end_stocklighting("Lighting Settings", Float) = 0
+            //     [HideInInspector] start_stockspecular("Specular Settings", Float) = 0
+            //         _StockingsSpecularColor ("Specular Color", Color) = (1,1,1,1)
+            //         _StockingsSpecularDetailColor ("Specular Detail Color", Color) = (1,1,1,1)
+            //         _StockingsSpecularDetailRange ("Specular Detail Range", Float) = 1
+            //         _StockingsSpecularDetailScale ("Specular Detail Scale", Float) = 1
+            //         _StockingsSpecularDetailSharpe ("Specular Detail Sharpe", Float) = 1
+            //         _StockingsSpecularDistance ("Specular Distance", Float) = 1
+            //         _StockingsSpecularFade ("Specular Fade", Float) = 1
+            //         _StockingsSpecularRange ("Specular Range", Float) = 1
+            //         _StockingsSpecularScale ("Specular Scale", Float) = 1
+            //         _StockingsSpecularSharpe ("Specular Sharpe", Float) = 1
+            //         _StockingsSpecularShift ("Specular Shift", Float) = 1
+            //         _StockingsTilingDistance ("Tiling Distance", Float) = 1
+            //         _StockingsWHite ("White", Float) = 1
+            //     [HideInInspector] end_stockspecular("Specular Settings", Float) = 0
+            // [HideInInspector] end_stocking("", Float) = 0
+            //endex
         [HideInInspector] end_reflections ("", Float) = 0
         //Reflections End
         
@@ -425,7 +487,7 @@ Shader "HoyoToon/Genshin/Character"
                 [HideInInspector] end_glowcolor("", Float) = 0
                 // Force Eye Glow
                 [HideInInspector] start_eyeemission("Eye Emission--{reference_property:_ToggleEyeGlow}", Float) = 0
-                    [Toggle] _ToggleEyeGlow ("Enable Eye Glow", Float) = 0.0
+                    [Toggle] _ToggleEyeGlow ("Enable Eye Glow", Float) = 1.0
                 
                     _EyeGlowStrength ("Eye Glow Strength", Float) = 0.5
                     _EyeTimeOffset ("Eye Glow Timing Offset", Range(0.0, 1.0)) = 0.1
@@ -698,7 +760,10 @@ Shader "HoyoToon/Genshin/Character"
                     _NyxStateOutlineColorOnBodyOpacity ("Blend Rate", Float) = 0
                 [HideInInspector] end_bodygroup ("", Float) = 0
                 [HideInInspector] start_nyxoutline ("Outline", Float) = 0
-                    [Toggle(ENABLE_NYX)] _EnableNyxOutline ("Enable Outline", Float) = 0
+                    [Helpbox] _NyxOutlineHelpBox("This effect is incompatible with the Eye Stencils as it introduces conflicting Stencil States.", Float) = 0
+                    [Toggle(ENABLE_NYX)] _EnableNyxOutline ("Enable Outline--{on_value_actions:[
+                    {value:1,actions:[{type:SET_PROPERTY,data:_StencilPassA=2}, {type:SET_PROPERTY,data:_StencilPassNyx=0}, {type:SET_PROPERTY,data:_StencilCompA=8}]},
+                    {value:1,actions:[{type:SET_PROPERTY,data:_StencilCompNyx=6}, {type:SET_PROPERTY,data:_StencilRef=10}, {type:SET_PROPERTY,data:_StencilRefNyx=10}, {type:SET_PROPERTY,data:render_queue=2000}, {type:SET_PROPERTY,data:render_type=Opaque}]}]}", Float) = 0
                     [Toggle] _LineAffected ("Affected by Light", Float) = 0
                     _NyxStateOutlineColor ("Color", Color) =  (1,1,1,1)
                     _NyxStateOutlineColorScale ("Color Intensity", Float) = 1
@@ -715,7 +780,13 @@ Shader "HoyoToon/Genshin/Character"
                         [Vector2] _NyxStateOutlineVertAnimScaleRange ("Vertex Scale Lerp Range", Vector) = (1,1,0,0)
                         _NyxStateOutlineVertAnimScaleLerpHeightRange ("Vertex Lerp Height Range", Vector) = (0,1,1,0)
                     [HideInInspector] end_nyxvert ("", Float) = 0
+                    [HideInInspector] start_nyxstencilsetting ("Stencil Settings", Float) = 0
+                        [Enum(UnityEngine.Rendering.StencilOp)] _StencilPassNyx ("Stencil Pass Op A", Float) = 0
+                        [Enum(UnityEngine.Rendering.CompareFunction)] _StencilCompNyx ("Stencil Compare Function A", Float) = 8
+                        [IntRange] _StencilRefNyx ("Stencil Reference Value", Range(0, 255)) = 0
+                    [HideInInspector] end_nyxstencilsetting ("", Float) = 0
                 [HideInInspector] end_nyxoutline ("", Float) = 0
+                
 
             [HideInInspector] end_nyx("NightSoul", Float) = 0
             // Mavuika VAT
@@ -851,7 +922,40 @@ Shader "HoyoToon/Genshin/Character"
                     _FakePointSkinIntensity3 ("Light On Skin Intensity", Float) = 1
                     _FakePointSkinSaturate3 ("Light On Skin Saturation", Float) = 0
                 [HideInInspector] end_thirdlight("", float) = 0
-            [HideInInspector] end_fakelight("", float) = 0
+            [HideInInspector] end_fakelight("", float) = 0  
+
+            [HideInInspector] start_eyestencil ("Eye Stencil", Float) = 0
+                [Helpbox] _StencilHelp("Warning: This feature requires some manual work to be done on your model and depending on future game updates it may break.", float) = 0
+                [Helpbox] _StencilHelp2("This effect is incompatible with the NightSoul outline as it introduces conflicting Stencil States--{condition_show:{type:PROPERTY_BOOL,data:_EnableNyxOutline==1}}", float) = 0
+                [Toggle] _UseEyeStencil ("Use Stencil", Float) = 0
+                [Enum(Face, 0, Eye, 1, Hair, 2, Off, 3)] _StencilType ("Stencil Type--{on_value_actions:[
+                    {value:3,actions:[{type:SET_PROPERTY,data:_CullMode=0}, {type:SET_PROPERTY,data:_SrcBlend=5}, {type:SET_PROPERTY,data:_DstBlend=10}]},
+                    {value:3,actions:[{type:SET_PROPERTY,data:_StencilPassA=2}, {type:SET_PROPERTY,data:_StencilPassB=0}, {type:SET_PROPERTY,data:_StencilCompA=0}]},
+                    {value:3,actions:[{type:SET_PROPERTY,data:_StencilCompB=0}, {type:SET_PROPERTY,data:_StencilRef=0}, {type:SET_PROPERTY,data:render_queue=2040}, {type:SET_PROPERTY,data:render_type=Opaque}]},
+
+                    {value:0,actions:[{type:SET_PROPERTY,data:_CullMode=2}, {type:SET_PROPERTY,data:_SrcBlend=1}, {type:SET_PROPERTY,data:_DstBlend=0}]},
+                    {value:0,actions:[{type:SET_PROPERTY,data:_StencilPassA=0}, {type:SET_PROPERTY,data:_StencilPassB=2}, {type:SET_PROPERTY,data:_StencilCompA=5}]},
+                    {value:0,actions:[{type:SET_PROPERTY,data:_StencilCompB=5}, {type:SET_PROPERTY,data:_StencilRef=100}, {type:SET_PROPERTY,data:render_queue=2010}, {type:SET_PROPERTY,data:render_type=Opaque}]},
+
+                    {value:1,actions:[{type:SET_PROPERTY,data:_CullMode=2}, {type:SET_PROPERTY,data:_SrcBlend=1}, {type:SET_PROPERTY,data:_DstBlend=0}]},
+                    {value:1,actions:[{type:SET_PROPERTY,data:_StencilPassA=0}, {type:SET_PROPERTY,data:_StencilPassB=2}, {type:SET_PROPERTY,data:_StencilCompA=5}]},
+                    {value:1,actions:[{type:SET_PROPERTY,data:_StencilCompB=5}, {type:SET_PROPERTY,data:_StencilRef=100}, {type:SET_PROPERTY,data:render_queue=2010}, {type:SET_PROPERTY,data:render_type=Opaque}]},
+
+                    {value:2,actions:[{type:SET_PROPERTY,data:_CullMode=0}, {type:SET_PROPERTY,data:_SrcBlend=1}, {type:SET_PROPERTY,data:_DstBlend=0}]},
+                    {value:2,actions:[{type:SET_PROPERTY,data:_StencilPassA=0}, {type:SET_PROPERTY,data:_StencilPassB=0}, {type:SET_PROPERTY,data:_StencilCompA=5}]},
+                    {value:2,actions:[{type:SET_PROPERTY,data:_StencilCompB=8}, {type:SET_PROPERTY,data:_StencilRef=100}, {type:SET_PROPERTY,data:render_queue=2020}, {type:SET_PROPERTY,data:render_type=Opaque}]}]}", Float) = 3
+                [Enum(Off, 0, Left, 1, Right, 2)] _StencilFilter ("Filter Stencil Side", Float) = 0
+                [Toggle] _HairBlendUse("View Angle Fade", Float) = 0
+                _HairBlendSilhouette ("Stencil Blend", Float) = 0.5
+                _HairZOffset ("Z Mask Offset", Float) = 0
+                [HideInInspector] start_stencilsetting ("Stencil Settings", Float) = 0
+                    [Enum(UnityEngine.Rendering.StencilOp)] _StencilPassA ("Stencil Pass Op A", Float) = 0
+                    [Enum(UnityEngine.Rendering.StencilOp)] _StencilPassB ("Stencil Pass Op B", Float) = 0
+                    [Enum(UnityEngine.Rendering.CompareFunction)] _StencilCompA ("Stencil Compare Function A", Float) = 8
+                    [Enum(UnityEngine.Rendering.CompareFunction)] _StencilCompB ("Stencil Compare Function B", Float) = 8
+                    [IntRange] _StencilRef ("Stencil Reference Value", Range(0, 255)) = 0
+                [HideInInspector] end_stencilsetting ("", Float) = 0
+            [HideInInspector] end_eyestencil ("", Float) = 0
 
             // [HideInInspector] start_dissolve("Dissolve", Float) = 0
             // [HideInInspector] end_dissolve ("", Float) = 0
@@ -937,6 +1041,9 @@ Shader "HoyoToon/Genshin/Character"
         //ifex _UseCharacterLeather == 0
             #define use_leather
         //endex
+        //ifex _UseCharacterStockings == 0
+            #define use_stockings    
+        //endex
         //ifex _OutlineEnabled == 0
             #define use_outline
         //endex
@@ -989,15 +1096,39 @@ Shader "HoyoToon/Genshin/Character"
             Blend [_SrcBlend] [_DstBlend]
             Stencil
             {
-				Ref 10
-				Comp always
-				Pass replace
+				Ref [_StencilRef]
+				Comp [_StencilCompA]
+        		Pass [_StencilPassA]  
 			}
             HLSLPROGRAM
             
             
             #pragma multi_compile_fwdbase
             #pragma multi_compile _IS_PASS_BASE
+            
+            #pragma vertex vs_model
+            #pragma fragment ps_model
+
+            #include "Includes/HoyoToonGenshin-program.hlsl"
+            ENDHLSL
+        }      
+
+        Pass // Character Pass, the only REQUIRED pass
+        {
+            Name "Character Pass"
+            Tags{ "LightMode" = "ForwardBase" }
+            Cull [_Cull]
+            Blend SrcAlpha OneMinusSrcAlpha, SrcAlpha OneMinusSrcAlpha
+            Stencil
+            {
+                Ref [_StencilRef]
+                Comp [_StencilCompB]
+        		Pass [_StencilPassB]  
+            }
+            HLSLPROGRAM            
+            #pragma multi_compile_fwdbase
+            #pragma multi_compile _IS_PASS_BASE
+            #define is_stencil
             
             #pragma vertex vs_model
             #pragma fragment ps_model
@@ -1013,12 +1144,12 @@ Shader "HoyoToon/Genshin/Character"
             Cull [_Cull]
             ZWrite Off
             Blend One One     
-            Stencil
-            {
-                Ref 10
-				Comp always
-				Pass replace
-			}     
+            // Stencil
+            // {
+            //     Ref 10
+			// 	Comp always
+			// 	Pass replace
+			// }     
             HLSLPROGRAM
             
             #pragma multi_compile_fwdadd
@@ -1037,14 +1168,14 @@ Shader "HoyoToon/Genshin/Character"
             Name "Outline Pass"
             Tags{ "LightMode" = "ForwardBase" }
             Cull Front
-            Stencil
-            {
-				Ref 10
-				Comp always
-				Pass replace
-                Fail replace
-                ZFail keep
-			}
+            // Stencil
+            // {
+			// 	Ref 10
+			// 	Comp always
+			// 	Pass replace
+            //     Fail replace
+            //     ZFail keep
+			// }
             HLSLPROGRAM
             #pragma multi_compile_fwdbase
             
@@ -1079,10 +1210,10 @@ Shader "HoyoToon/Genshin/Character"
             Cull Front
             Stencil
 			{
-				Ref 10
-				Comp notequal
-				Pass keep
-				Fail keep
+				Ref [_StencilRefNyx]
+				Comp [_StencilCompNyx]
+				Pass [_StencilPassNyx]
+				Fail [_StencilPassNyx]
 			}
             HLSLPROGRAM
             #pragma multi_compile_fwdbase
