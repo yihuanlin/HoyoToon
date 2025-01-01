@@ -52,10 +52,10 @@
     "GIShader": [
       "HoyoToon/Genshin/Character"
     ],
-    "Hi3Shader": [
+    "HI3Shader": [
       "HoyoToon/Honkai Impact/Character Part 1"
     ],
-    "Hi3P2Shader": [
+    "HI3P2Shader": [
       "HoyoToon/Honkai Impact/Character Part 2"
     ],
     "WuWaShader": [
@@ -63,6 +63,9 @@
     ],
     "ZZZShader": [
       "HoyoToon/Zenless Zone Zero/Character"
+    ],
+    "QuestShader": [
+      "VRChat/Mobile/Toon Lit"
     ]
   },
   "ShaderKeywords": {
@@ -78,10 +81,10 @@
       "UseGlassSpecularToggle",
       "_CurrentFrame"
     ],
-    "Hi3Shader": [
+    "HI3Shader": [
       "_SPCubeMapIntensity"
     ],
-    "Hi3P2Shader": [
+    "HI3P2Shader": [
       "_MetalMapGrp",
       "_MicsGrp"
     ],
