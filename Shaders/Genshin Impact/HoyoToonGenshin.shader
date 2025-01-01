@@ -925,7 +925,7 @@ Shader "HoyoToon/Genshin/Character"
             [HideInInspector] end_fakelight("", float) = 0  
 
             [HideInInspector] start_eyestencil ("Eye Stencil", Float) = 0
-                [Helpbox] _StencilHelp("Warning: This feature requires some manual work to be done on your model and depending on future game updates it may break.", float) = 0
+                [Helpbox] _StencilHelp("Warning: This feature requires you to seperate the eyes from the hair material and make it it's own material. Depending on future game updates it may break.", float) = 0
                 [Helpbox] _StencilHelp2("This effect is incompatible with the NightSoul outline as it introduces conflicting Stencil States--{condition_show:{type:PROPERTY_BOOL,data:_EnableNyxOutline==1}}", float) = 0
                 [Toggle] _UseEyeStencil ("Use Stencil", Float) = 0
                 [Enum(Face, 0, Eye, 1, Hair, 2, Off, 3)] _StencilType ("Stencil Type--{on_value_actions:[
