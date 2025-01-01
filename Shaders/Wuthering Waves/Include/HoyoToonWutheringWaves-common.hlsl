@@ -784,3 +784,31 @@ void material_tacet(inout float3 color, in float2 uv)
 
     color.xyz = lerp(_SDFColor, color.xyz, mark);
 }
+
+void aurora_wave(in float2 uv, in float3 pos, in float3 normal, in float3 tangent, in float3 view, in float4 spos, inout float3 color)
+{
+    // get screenspace uvs
+    float2 ssuv = spos.xy/spos.ww;
+    ssuv = ssuv * _Second_Height;
+    // sample noise texture
+    float noise = _CommonNoiseMap.Sample(sampler_linear_repeat, uv + (_Time.yy * float2(0.f, 0.1f))).y * _Second_NoiseStrength ;
+    // sample stars and mask
+    float4 secondary = _Second_RGB.Sample(sampler_linear_repeat, ssuv * (noise * 2.0 - 1.0f));
+    float mask = _Second_RGB.Sample(sampler_linear_repeat, uv).w;
+
+    // Calculate the aurora effect using UVs and normals
+    float aurora = sin((uv.y) * (5.0f * _WaveTiling) + (_Time.y * (_WaveSpeed * 10.0f))) * 0.5 + 0.5 ;
+    float auroraFactor = sin(normal.y * normal.z) * -_WaveNormalAmount;
+    aurora = aurora + auroraFactor;
+    // modify the aurora 
+    aurora = max(aurora, 0.0f);
+    aurora = pow(aurora, 1.0f);
+    aurora = smoothstep(0.5f, 1.0f, aurora);
+
+    // calculate color
+    float3 auroraColor = secondary + pow(color, 1.2f);
+    auroraColor = auroraColor * (aurora * _AuroraAmount);
+
+    // mask and add the auroraColor to the output color
+    color.xyz =  auroraColor * mask + color;
+}

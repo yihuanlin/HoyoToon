@@ -164,6 +164,7 @@ fixed4 ps_model (vertex_out i) : SV_Target
         #if defined(use_stocking)
             }
         #endif
+        if(_UseStarrySky) aurora_wave(uv, i.ws_pos, normal, tangent, view, i.ss_pos, color.xyz);
     }
     #if defined(is_face)
     else if(_MaterialType == 1) // face shading, there isnt

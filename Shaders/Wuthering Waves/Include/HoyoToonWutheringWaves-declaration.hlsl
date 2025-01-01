@@ -15,9 +15,13 @@ Texture2D _SDF;
 Texture2D _Noise;
 Texture2D _Noise02;
 Texture2D _ShakeNoise;
+Texture2D _Second_RGB;
+Texture2D _CommonNoiseMap;
 SamplerState sampler_MainTex;
 SamplerState sampler_linear_repeat;
 SamplerState sampler_linear_clamp;
+
+float4 _CommonNoiseMap_ST;
 
 
 float4 _EM_TexelSize; // x 1/height y 1/width z height w width
@@ -209,6 +213,18 @@ float _RimHardness;
 // pbr
 float _Metalllic;
 float _UsePBR;
+
+// aurora
+float _UseStarrySky;
+float _AuroraAmount;
+float _Second_NoiseStrength;
+float _Second_Height;
+float _Second_HeightRadio;
+float _UseNoise;
+float _WaveAmount;
+float _WaveNormalAmount;
+float _WaveSpeed;
+float _WaveTiling;
 
 // debug
 float _DebugMode;

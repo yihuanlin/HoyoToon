@@ -242,6 +242,28 @@ Shader "HoyoToon/Wuthering Waves/Character"
                 [HideInInspector] end_soundwave ("", Float) = 0
              
             [HideInInspector] end_tacet ("", Float) = 0
+
+            [HideInInspector] start_uvwave("Star Aurora", Float) = 0
+                [Toggle] _UseStarrySky ("Enable Star Aurora", Float) = 0
+                _AuroraAmount ("Aurora Amount", Float) = 3.0
+                [HideInInspector] start_secondrgb ("Secondary Diffuse", float) = 0
+                    _Second_RGB ("Secondary Diffuse", 2D) = "white" {}
+                    _Second_NoiseStrength ("Secondary Noise Strength", Float) = 0.15
+                    _Second_Height ("Secondary Height", Float) = -0.4
+                    _Second_HeightRadio ("Secondary Height Ratio", Float) = 0.6
+                [HideInInspector] end_secondrgb ("", float) = 0
+                [HideInInspector] start_starrynoise ("Noise", Float) = 0
+                    [Toggle] _UseNoise ("Enable Noise", Float) = 0
+                    _CommonNoiseMap ("Common Noise Map", 2D) = "white" {}
+                [HideInInspector] end_starrynoise ("", Float) = 0
+                [HideInInspector] start_wave ("Wave", Float) = 0
+                    _WaveAmount ("Wave Amount", Float) = 0.8
+                    _WaveNormalAmount ("Wave Normal Amount", Float) = 1.2
+                    _WaveSpeed  ("Wave Speed", Float) = 0.3
+                    _WaveTiling ("Wave Tiling", Float) = 5.5
+                [HideInInspector] end_wave ("", Float) = 0
+                
+            [HideInInspector] end_uvwave("", Float) = 0
         [HideInInspector] end_special ("", Float) = 0
 
         [HideInInspector] start_renderingOptions("Rendering Options", Float) = 0
