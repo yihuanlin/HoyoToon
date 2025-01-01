@@ -247,7 +247,8 @@ float shadow_area_face(float2 uv, float3 light)
         float facemap = _FaceMapTex.Sample(sampler_linear_repeat, faceuv).w;
         // interpolate between sharp and smooth face shading
         shadow_step = smoothstep(shadow_step - (_FaceMapSoftness), shadow_step + (_FaceMapSoftness), facemap);
-
+        
+        if(_UseFaceBlueAsAO) shadow_step = shadow_step * _LightMapTex.Sample(sampler_linear_repeat, uv).b;
     #else 
         float shadow_step = 1.0f;
     #endif
@@ -344,10 +345,8 @@ float shadow_area_transition(float lightmapao, float vertexao, float ndotl, floa
 void shadow_color(in float lightmapao, in float vertexao, in float customao, in float vertexwidth, in float ndotl, in float material_id, in float2 uv, inout float3 shadow, inout float3 metalshadow, inout float3 color, float3 light)
 {   
     #if defined(use_shadow)
-        if(_CustomAOEnable)
-        {
-            ndotl = ndotl * customao;
-        }
+        float ao = 1.0f;
+        if(_CustomAOEnable) ao = customao;
         float3 outcolor = (float3)1.0f;
         float4 warm_shadow_array[5] = 
         {
@@ -383,15 +382,16 @@ void shadow_color(in float lightmapao, in float vertexao, in float customao, in 
 
         if(_UseShadowRamp)
         {
+
             #if defined(has_sramp)
             float2 day_ramp_coords = -((get_index(material_id)) * 0.1f + 0.05f) + 1.0f;
-            day_ramp_coords.x = shadow.x;
+            day_ramp_coords.x = shadow.x * ao;
             float2 night_ramp_coords = -((get_index(material_id)) * 0.1f + 0.55f) + 1.0f;
-            night_ramp_coords.x = shadow.x;
+            night_ramp_coords.x = shadow.x * ao;
             float3 dayramp = _PackedShadowRampTex.SampleLevel(sampler_linear_clamp, day_ramp_coords, 0.0f).xyz;
             float3 nightramp = _PackedShadowRampTex.SampleLevel(sampler_linear_clamp, night_ramp_coords, 0.0f);
             float3 ramp = lerp(dayramp, nightramp, _DayOrNight);
-            color = lerp(1.0f, ramp, shadow.y);
+            color = lerp(1.0f, ramp, saturate(shadow.y + (1.0f - ao)));
             #endif
         }
         else if(_UseFaceMapNew)
@@ -1431,4 +1431,96 @@ int bitFieldInsert(int base, int insert, int start, int num)
 {
     int mask = ~(0xffffffff < num) << start;
     return (base & ~mask) | (insert << start);
+}
+
+void stencil_mask(float4 pos, inout float4 color, float4 lightmap, float3 view)
+{
+    // #if defined (is_stencil) 
+        float filterMask = 1.0f;
+        if(_StencilFilter > 0)
+        {
+            if(_StencilFilter == 1) filterMask = saturate(step(0, pos.x));
+            if(_StencilFilter == 2) filterMask = saturate(step(pos.x, 0));
+        }
+
+        filterMask = filterMask * _HairBlendSilhouette;
+        filterMask = max(0, filterMask);
+
+        if(_StencilType == 2) // hair
+        {
+            float3 up      = UnityObjectToWorldDir(_headUpVector.xyz);
+            float3 forward = UnityObjectToWorldDir(_headForwardVector.xyz);
+            float3 right   = UnityObjectToWorldDir(_headRightVector.xyz);
+
+            float3 view_xz = normalize(view - dot(view, up) * up);
+            float cosxz    = max(0.0f, dot(view_xz, forward));
+            float alpha_a  = saturate((1.0f - cosxz) / 0.658f);
+
+            float3 view_yz = normalize(view - dot(view, right) * right);
+            float cosyz    = max(0.0f, dot(view_yz, forward));
+            float alpha_b  = saturate((1.0f - cosyz) / 0.293f);
+            float hair_alpha;
+            hair_alpha = max(alpha_a, alpha_b);
+
+            hair_alpha = (_HairBlendUse) ? max(hair_alpha, filterMask) : saturate(filterMask + saturate(step(pos.z - _HairZOffset, 0.0f)));
+
+            // color.xyz = hair_alpha;
+            color.w = hair_alpha;
+        }
+        else if(_StencilType == 1) // eye
+        {
+            color.w = filterMask;
+            clip(color.w - 0.01f);
+        }
+        else if(_StencilType == 0) // face
+        {     
+            color.w = ( (lightmap.x - lightmap.w) <= 0) * saturate(step(0.0, pos.y - 0.01f)) * filterMask;
+            clip(color.w - 0.01f);
+        }
+        else
+        {
+            discard;
+        }
+    // #endif
+}
+
+// even if i dont push this for the january update, id like to get the back end started
+void character_stocking(in float3 normal, in float3 view, in float2 uv, in float materialRegion, in float check, inout float4 color)
+// initial implementation based on how I know mihoyo likes to implement stockings 
+// thanks to star rail and hi3p2
+{
+    // need to make sure the logic doesnt escape at all
+    #if defined(use_stockings) 
+    if(_UseCharacterStockings)
+    {
+        float2 patternUV = uv;
+        // patternUV = patternUV * _StockingsDetailPattenScale + (_StockingsDetailPattenScale * -0.5f);
+        // patternUV = patternUV * _StockingsDetailPattenTiling;
+        float2 detailUV = uv;
+        float2 decalUV = uv;
+
+        // float pattern = _StockingsDetailTex.Sample(sampler_linear_repeat, patternUV).z;
+
+        float4 lightmap = _LightMapTex.Sample(sampler_linear_clamp, uv);
+
+
+        // color.xyz = pattern;
+
+        float ndotv = dot(normal, view);
+        float ndotl = dot(normal, _WorldSpaceLightPos0.xyz);
+
+        float stocking_light = lerp(0.0f, _StockingsLightColor, lightmap.x);
+        stocking_light = lerp(stocking_light * _StockingsLightScaleInShadow, stocking_light, saturate(ndotl));
+
+
+        float3 stocking_color = lerp(_StockingsShadowColor, 1.0f, ndotl);
+
+        float3 stocking_specular = (saturate(pow(ndotv, _StockingsSpecularSharpe)) * _StockingsSpecularScale) * _StockingsSpecularColor;
+        stocking_specular = stocking_specular * lightmap.z;
+
+        float stocking_light_range = 1.0f - _StockingsLightRange;
+
+        color.xyz = lightmap.x * 0.5 + 0.5;
+    }
+    #endif
 }
