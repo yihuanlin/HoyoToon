@@ -109,8 +109,8 @@ float shadow_rate_face(float2 uv, float3 light)
             faceuv = uv * float2(-1.0f, 1.0f) + float2(1.0f, 0.0f);
         }
         float shadow_step = 1.0f - (fdotl * 0.5f + 0.5f);
-        float facemap = _FaceMap.Sample(sampler_FaceMap, faceuv).w;
-        shadow_step = smoothstep(shadow_step - (0.0001f), shadow_step + (0.0001f), facemap);
+        float facemap = _FaceMap.Sample(sampler_linear_repeat, faceuv).w;
+        shadow_step = smoothstep(shadow_step - ((0.0001 /*_FaceSoftness*/)), shadow_step + ((0.0001 /*_FaceSoftness*/)), facemap);
     #else
         float shadow_step = 1.00f;
     #endif
@@ -154,183 +154,364 @@ float remap(float value, float old_min, float old_max, float new_min, float new_
 {
     return new_min + (value - old_min) * (new_max - new_min) / (old_max - old_min);
 }
-void dissolve_vertex(in float4 pos_ws, float4 pos,  in float2 uv_0, in float2 uv_2, out float4 dis_pos, out float4 dis_uv)
+void dissolve_vertex(vs_in i, out float4 dis_pos, out float4 dis_uv)
 {
     #if defined(can_dissolve)
-        float3 dissolve_position;
-        dissolve_position = pos_ws.xyz - float4(1,0,0,1).xyz;
-        dissolve_position = dissolve_position.xyz - pos;
-        dissolve_position = (float3)(1.0 /*_DissolvePosMaskWorldONM*/) * dissolve_position.xyz + pos.xyz;
-        float3 dis_pos_off = dissolve_position + float3(1.0f, 1.0f, 0.0f);
-        dissolve_position = (float3)(1.0 /*_DissolvePosMaskGlobalOnM*/) * dis_pos_off + dissolve_position;
-        dissolve_position = dissolve_position + -(float4(0,1,0,0).xyz);
-        float3 dis_light_pos =  float3(1.0f, 1.0f, 0.0f) + (-unity_ObjectToWorld[3].xyz);
-        float3 dis_light_pos_2 = (float3)(1.0 /*_DissolvePosMaskWorldONM*/) * (-unity_ObjectToWorld[3].xyz) + float4(1,0,0,1).xyz;
-        dis_light_pos = dis_light_pos + (-dis_light_pos_2);
-        dis_light_pos = (float3)(1.0 /*_DissolvePosMaskGlobalOnM*/) * dis_light_pos + dis_light_pos_2;
-        dis_light_pos = normalize(dis_light_pos.xyz);
-        float dis_y = dot(dis_light_pos.xyz, dissolve_position);
-        float dis_yy = abs(dis_y) + max(float4(1,0,0,1).w, 0.01f);
-        dis_y = dis_yy / (dis_y + dis_y);
-        dis_yy = dis_y * -2.0f + 1.0f;
-        dis_y = (0.0 /*_DissolvePosMaskFilpOnM*/) * dis_yy + dis_y;
-        dis_y = dis_y + (-(1.0 /*_DissolvePosMaskOnM*/));
-        dis_y = dis_y + 1.0;
-        dis_y = saturate(dis_y);
-        float dis_check = dot(abs(dis_light_pos), (float3)1.0f) >= 0.001f;
-        dis_pos.y = dis_check ? dis_y : 1.0f;
-        dis_pos.zw = (float2)0.0f;
-        float2 dissolve_uv = -(uv_0.xy) + uv_2;
-        dissolve_uv = (float2)(0.0 /*_DissolveUVM*/) * dissolve_uv + uv_0.xy;
-        dis_uv.xy = dissolve_uv * _DissolveSTM.xy + _DissolveSTM.zw;
-        dis_uv.zw = dissolve_uv * float4(2,2,0,0).xy + float4(2,2,0,0).zw;
-        dis_pos.x = dissolve_uv.x;
+        float2 dissolveUV = lerp(i.uv_0, i.uv_1, (0.0 /*_DissolveUV*/));
+        dis_uv = float4(dissolveUV.xy * float4(1,1,0,0).xy + float4(1,1,0,0).zw, dissolveUV.xy * float4(1,1,0,0).xy + float4(1,1,0,0).zw);
+        dis_pos.x = dissolveUV.x;
+        float4 ws_pos = mul(unity_ObjectToWorld, i.vertex);
+        float4 dissolvePos = lerp(i.vertex, ws_pos, (0.0 /*_DissolvePosMaskWorldON*/));
+        float3 u_xlat1;
+        float4 u_xlat2;
+        float4 u_xlat3;
+        float3 u_xlat16_4;
+        float3 u_xlat6;
+        float u_xlat16_9;
+        float u_xlat16;
+        bool u_xlatb16;
+        u_xlat1.xyz = dissolvePos;
+        u_xlat2.xyz = (-u_xlat1.xyz) + float4(1,0,0,1).xyz;
+        u_xlat1.xyz = (float3)(_DissolvePosMaskGlobalOn) * u_xlat2.xyz + u_xlat1.xyz;
+        u_xlat1.xyz = u_xlat1.xyz + (-float4(0,0,0,0).xyz);
+        u_xlat2.xyz = float4(1,0,0,1).xyz + (-unity_ObjectToWorld[3].xyz);
+        u_xlat3.xyz = (float3)((0.0 /*_DissolvePosMaskWorldON*/)) * (-unity_ObjectToWorld[3].xyz) + float4(1,0,0,1).xyz;
+        u_xlat2.xyz = u_xlat2.xyz + (-u_xlat3.xyz);
+        u_xlat2.xyz = (float3)(_DissolvePosMaskGlobalOn) * u_xlat2.xyz + u_xlat3.xyz;
+        u_xlat16_4.x = dot(u_xlat2.xyz, u_xlat2.xyz);
+        u_xlat16_4.x = rsqrt(u_xlat16_4.x);
+        u_xlat16_4.xyz = u_xlat2.xyz * u_xlat16_4.xxx;
+        u_xlat16 = dot(abs(u_xlat2.xyz), float3(1.0, 1.0, 1.0));
+        u_xlatb16 = u_xlat16>=0.00100000005;
+        u_xlat1.x = dot(u_xlat16_4.xyz, u_xlat1.xyz);
+        u_xlat16_4.x = max(float4(1,0,0,1).w, 0.00999999978);
+        u_xlat16_9 = abs(u_xlat1.x) + u_xlat16_4.x;
+        u_xlat16_4.x = u_xlat16_4.x + u_xlat16_4.x;
+        u_xlat16_4.x = u_xlat16_9 / u_xlat16_4.x;
+        u_xlat16_9 = u_xlat16_4.x * -2.0 + 1.0;
+        u_xlat16_4.x = (0.0 /*_DissolvePosMaskFilpOn*/) * u_xlat16_9 + u_xlat16_4.x;
+        u_xlat16_4.x = u_xlat16_4.x + (-(0.0 /*_DissolvePosMaskOn*/));
+        u_xlat16_4.x = u_xlat16_4.x + 1.0;
+        u_xlat16_4.x = clamp(u_xlat16_4.x, 0.0, 1.0);
+        dis_pos.y = (u_xlatb16) ? u_xlat16_4.x : 1.0;
+        dis_pos.zw = float2(0.0, 0.0);
     #endif
 }
 void dissolve_clip(in float4 ws_pos, in float4 dis_pos, in float4 dis_uv, in float2 uv)
 {
     #if defined(can_dissolve)
-        (0.83 /*_DissolveMapAddM*/) = lerp((0.83 /*_DissolveMapAddM*/), 0.0f, (0.0 /*_DissolveRateM*/));
-        float dissolve_rate = (0.0 /*_DissolveRateM*/);
-        float2 dis_tex;
-        float4 dis_pos_;
-        float3 dissolve_map;
-        float2 distort;
-        float dissolve_map_2;
-        float4 dissolve_mask;
-        float dissolve_comp;
-        float dis_map_add;
-        float dis_clip;
-        dis_tex.xy = dis_uv.zw + float2(3.00000011e-06, 3.00000011e-06);
-        dis_pos_.x = (-dis_pos.y) + (-0.36 /*_DissoveDirecMaskM*/);
-        dis_pos_.x = min(abs(dis_pos_.x), 1.0f);
-        dis_tex.xy = float4(0,0.1,0,-0.1).zw * _Time.yy + dis_tex.xy;
-        dissolve_map.xy = _DissolveMap.Sample(sampler_DissolveMap, dis_tex.xy).xy;
-        dis_tex.xy = dissolve_map.xy + (float2)-0.5f;
-        distort.xy = -(dis_tex.xy) * (float2)(0.5 /*_DissolveDistortionIntensityM*/) + dis_uv.xy;
-        dis_tex.xy = float4(0,0.1,0,-0.1).xy * _Time.yy + distort.xy;
-        dissolve_map_2 = _DissolveMap.Sample(sampler_DissolveMap, dis_tex.xy).x;
-        dissolve_mask = _DissolveMask.Sample(sampler_DissolveMap, uv.xy);
-        if((0.0 /*_InvertDissovle*/)) dissolve_mask = 1.0f - dissolve_mask;
-        dissolve_comp = dot(dissolve_mask, float4(1,1,0,0));     
-        dis_map_add = dissolve_map_2 + (0.83 /*_DissolveMapAddM*/); 
-        dis_clip = dis_pos_.x * dis_map_add;
-        dis_clip.x = dissolve_comp * dis_clip.x;
-        dis_clip.x = dis_clip.x * dis_pos.y;
-        dis_clip.x = dis_clip.x * 1.009f + -0.009f;
-        if((0.0 /*_DissolvePosMaskFilpOnM*/))
+        float rate = (0.0 /*_DissolveRate*/);
+        if(_InvertRate) rate = 1.0 - rate;
+        if((0.0 /*_DissolveUseDirection*/))
         {
-            dissolve_rate = remap(dissolve_rate, 0.0f, 1.0f, 1.0f, 0.0f);   
-            dis_clip.x = 1.0f - dis_clip.x;
-        } 
-        clip(dis_clip.x - dissolve_rate);   
-    #endif
-}
-float4 dissolve_color(float4 ws_pos, float4 dis_pos, float4 dis_uv, float2 uv, float4 color)
-{
-    #if defined(can_dissolve)
-        (0.83 /*_DissolveMapAddM*/) = lerp((0.83 /*_DissolveMapAddM*/), 0.0f, (0.0 /*_DissolveRateM*/));
-        float dissolve_rate = (0.0 /*_DissolveRateM*/);
-        float disolve_direct_mask = -dis_pos.y + (-0.36 /*_DissoveDirecMaskM*/);
-        float2 dis_tex;
-        float4 dis_pos_;
-        float3 dissolve_map;
-        float2 distort;
-        float dissolve_map_2;
-        float4 dissolve_mask;
-        float dissolve_comp;
-        float dis_map_add;
-        float dis_clip;
-        dis_pos_.x = (-dis_pos.y) + (-0.36 /*_DissoveDirecMaskM*/);
-        dis_pos_.x = min(abs(dis_pos_.x), 1.0f);
-        dis_tex.xy = float4(0,0.1,0,-0.1).zw * _Time.yy + dis_uv.zw;
-        dissolve_map.xy = _DissolveMap.Sample(sampler_DissolveMap, dis_tex.xy).xy;
-        dis_tex.xy = dissolve_map.xy + (float2)-0.5f;
-        distort = -(dis_tex.xy) * (float2)(0.5 /*_DissolveDistortionIntensityM*/) + dis_uv.xy;
-        dis_tex.xy = float4(0,0.1,0,-0.1).xy * _Time.yy + distort.xy;
-        dissolve_map_2 = _DissolveMap.Sample(sampler_DissolveMap, dis_tex.xy).z;
-        dissolve_mask = _DissolveMask.Sample(sampler_DissolveMap, uv.xy);   
-        if((0.0 /*_InvertDissovle*/)) dissolve_mask = 1.0f - dissolve_mask;
-        dissolve_comp = dot(dissolve_mask, float4(1,1,0,0));     
-        dis_map_add = dissolve_map_2 + (0.83 /*_DissolveMapAddM*/); 
-        dis_clip = dis_pos_.x * dis_map_add;
-        dis_clip.x = dissolve_comp * dis_clip.x;
-        dis_clip.x = dis_clip.x * dis_pos.y;
-        dis_clip.x = dis_clip.x * 1.009f + -0.009f;
-        if((0.0 /*_DissolvePosMaskFilpOnM*/))
-        {
-            dissolve_rate = remap(1.0 - dissolve_rate, -1.0f, 0.0f, 1.0f, 0.0f);;   
-            dis_clip.x = 1.0f - dis_clip.x;
-        }  
-        if((0.0 /*_DissolveClip*/)) clip(dis_clip.x - dissolve_rate);   
-        float dis_outline_1 = dissolve_rate + (0.02 /*_DissolveOutlineSize1M*/);
-        float dis_outline_2 = dis_outline_1 + (-(-0.02 /*_DissolveOutlineSize2M*/)); 
-        float2 dis_outline_size = dis_clip.xx - float2(dis_outline_1, dis_outline_2); 
-        dis_outline_size = saturate(((float2)1.0f / (float4(0,0,0,0).xy + (float2)0.001f)) * dis_outline_size);  
-        float3 diss_out_off = color.xyz * dissolve_map_2 + (float3)_DissolveOutlineOffsetM;    
-        float3 dis_out_col_1 = diss_out_off * float4(0.4663585,3.103807,4.241642,1).xyz;
-        float3 dis_out_col_2 = diss_out_off * float4(0,0,0,0).xyz - dis_out_col_1.xyz;   
-        float3 dis_out_col = dis_outline_size.yyy * dis_out_col_2 + dis_out_col_1;  
-        float dis_alpha = dis_outline_size.x + 1.0f;
-        dis_alpha = dis_alpha - float4(0.4663585,3.103807,4.241642,1).w;
-        dis_alpha = saturate(dis_alpha);    
-        float4 dis_color;
-        dis_color.xyz = color.xyz - dis_out_col;
-        dis_color.xyz = dis_alpha * color.xyz + dis_out_col;    
-        float3 u_xlat2 = dis_color.xyz * float3(278.508514f, 278.508514f, 278.508514f) + float3(10.7771997f, 10.7771997f, 10.7771997f);
-        u_xlat2.xyz = u_xlat2.xyz * dis_color.xyz;
-        float3 u_xlat4 = dis_color.xyz * float3(298.604492f, 298.604492f, 298.604492f) + float3(88.7121964f, 88.7121964f, 88.7121964f);
-        u_xlat4.xyz = dis_color.xyz * u_xlat4.xyz + float3(80.6889038f, 80.6889038f, 80.6889038f);
-        u_xlat2.xyz = u_xlat2.xyz / u_xlat4.xyz;
-        u_xlat4.xyz = (-u_xlat2.xyz) + dis_color.xyz;
-        dis_color.xyz = dis_alpha.xxx * u_xlat4.xyz + u_xlat2.xyz;  
-        dis_color.w = color.w;
-        if(!(0.0 /*_DissolveClip*/)) 
-        {
-            if((0.0 /*_DissolvePosMaskFilpOnM*/))
-            {
-                dissolve_rate = remap(dissolve_rate, 1.0, 0.0f, 0.0f, 1.0f);;   
-            }  
-            if((dissolve_rate > 0.85))
-            {
-                dis_color.w = color.w;
-            }
-            else if(dissolve_rate < 0.85)
-            {
-                dis_color.w = color.w * smoothstep(0.0,0.1,(dis_clip.x ) -  dissolve_rate);
-                dissolve_rate = smoothstep(-1.0f, 14.0f, dissolve_rate);
-                dis_color.w = lerp(dis_color.w, color.w, dissolve_rate);
-                dis_color.w = saturate(dis_color.w);
-            }
+            float3 dissolvePos = ws_pos.xyz + (float3)1.99999999e-06;
+            dissolvePos.xyz = dissolvePos.xyz + (-_DissolveCenter.xyz);
+            dissolvePos = dot(dissolvePos.xyz, float4(0,0,0,0).xyz);
+            float test = 0.0f < dissolvePos ? 2 : int(0);
+            if(test == 0) discard;
         }
-        return dis_color;
-    #else
-        return color;
+        else
+        {
+            float2 dissolveUV = dis_uv.zw + (float2)3.00000011e-06;
+            dissolveUV = float4(0,0,0,0).zw * _Time.yy + dissolveUV.xy;
+            float2 dissolveMap = _DissolveMap.Sample(sampler_linear_repeat, dissolveUV);
+            dissolveMap.xy = -(dissolveMap + - 0.5f) * (float2)((0.01 /*_DissolveDistortionIntensity*/)) + dis_uv.xy;
+            dissolveUV = float4(0,0,0,0).xy * _Time.yy + dissolveMap.xy;
+            dissolveMap = _DissolveMap.Sample(sampler_linear_repeat, dissolveUV).zz + (0.0 /*_DissolveMapAdd*/);
+            float4 dissolveMask = _DissolveMask.Sample(sampler_linear_repeat, uv);
+            dissolveMask.x = dot(dissolveMask, float4(1,0,0,0));
+            float dissolve = (-dis_pos.x) + (2.0 /*_DissoveDirecMask*/);
+            dissolve.x = min(abs(dissolve.x), 1.0);
+            dissolve.x = dissolve.x * dissolveMap;
+            dissolve.x = dissolveMask.x * dissolve.x;
+            dissolve.x = dissolve.x * dis_pos.y;
+            dissolve.x = dissolve.x * 1.00999999 + -0.00999999978;
+            dissolve.x = dissolve.x + (-rate);
+            dissolve.x = dissolve.x + 1.0;
+            dissolve.x = floor(dissolve.x);
+            dissolve.x = max(dissolve.x, 0.0);
+            if((int)dissolve.x == 0) discard;
+        }
     #endif
 }
-void simple_dissolve(in float4 primary_diffuse, in float2 uv0, in float2 uv1, in float2 uv2, in float4 pos, inout float3 out_color, inout float out_alpha)
+void dissolve_color(float4 ws_pos, float4 dis_pos, float4 dis_uv, float2 uv,in float4 diffuse, inout float4 color)
 {
     #if defined(can_dissolve)
-    float2 dissolve_uv[3] =
-    {
-        uv0,
-        uv1,
-        uv2
-    };
-    float gradient = _DissolveGradientMask.Sample(sampler_DissolveGradientMask, dissolve_uv[(0.0 /*_DissolveUVChannel*/)]).x + (0.0 /*_DissolveGradientOffset*/);
-    if((0.0 /*_DisableDissolveGradient*/)) gradient = 1.0f; // fail safe incase of missing texture or unity fuckery
-    float2 distortion_uv = _Time.yy * float2(float4(0,0,0,0).xy * (1.0 /*_DissolveAnimSpeed*/)) + (float4(1,1,0,0).xy * dissolve_uv[(0.0 /*_DissolveUVChannel*/)] + float4(1,1,0,0).zw);
-    float distortion = _DissolveAnimTex.Sample(sampler_DissolveGradientMask, distortion_uv).x;
-    gradient = gradient + (0.0 /*_DissolveGradientOffset*/);
-    gradient = gradient * distortion;
-    float dis_direction = dot(float4(0,0,0,0).xyz, pos.xyz);
-    dis_direction = smoothstep(float4(0,1,0,0).x * (0.0 /*_DissolveSimpleRate*/), float4(0,1,0,0).y * (0.0 /*_DissolveSimpleRate*/), dis_direction - (0.0 /*_DissolveSimpleRate*/));
-    if((0.0 /*_DissolveUsePosition*/)) gradient = gradient * dis_direction;
-    gradient = smoothstep(float4(0,1,0,0).x * (0.0 /*_DissolveSimpleRate*/), float4(0,1,0,0).y * (0.0 /*_DissolveSimpleRate*/), gradient);
-    gradient = saturate(gradient);
-    if((0.0 /*_InvertGradient*/)) gradient = 1.0f - gradient;
-    out_alpha = out_alpha * gradient.x;
+        float rate = (0.0 /*_DissolveRate*/);
+        if(_InvertRate) rate = 1.0 - rate;
+        if((0.0 /*_DissolveUseDirection*/))
+        {
+            float3 u_xlat2  = ws_pos.xyz + (-_DissolveCenter.xyz);
+            float u_xlat0 = dot(u_xlat2.xyz, float4(0,0,0,0).xyz);
+            int test = 0.0<u_xlat0 ? (int)2 : (int)0;
+            if((test)==0){discard;}
+        }
+        else
+        {
+            float dissolveDirMask =  (-dis_pos.x) + (2.0 /*_DissoveDirecMask*/);
+            dissolveDirMask = min(abs(dissolveDirMask), 1.0);
+            float2 dissolveUV = float4(0,0,0,0).zw * _Time.yy + dis_uv.zw;
+            float2 dissolveMap = _DissolveMap.Sample(sampler_linear_repeat, dissolveUV).xy;
+            dissolveMap = -(dissolveMap + -0.5f) * (0.01 /*_DissolveDistortionIntensity*/).xx + dis_uv.xy;
+            dissolveMap = float4(0,0,0,0).xy * _Time.yy + dissolveMap;
+            dissolveMap.x = _DissolveMap.Sample(sampler_linear_repeat, dissolveMap).z + (0.0 /*_DissolveMapAdd*/);
+            float4 dissolveMask = _DissolveMask.Sample(sampler_linear_repeat, uv);
+            dissolveMask.x = dot(dissolveMask, float4(1,0,0,0));
+            dissolveDirMask = dissolveDirMask * dissolveMap;
+            dissolveDirMask = dissolveMask.x * dissolveDirMask;
+            dissolveDirMask = dissolveDirMask * dis_pos.y;
+            dissolveDirMask = dissolveDirMask * 1.00999999 + -0.00999999978;
+            float4 u_xlat16_8;
+            float4 u_xlat16_11;
+            float4 u_xlat16_12;
+            float4 u_xlat16_18;
+            float4 u_xlat2;
+            float4 u_xlat4;
+            float4 u_xlat7;
+            float4 u_xlat16_3;
+            float4 u_xlat16_5;
+            float4 u_xlat16_23;
+            float4 u_xlat16_38;
+            float4 u_xlat16_0;
+            float4 u_xlat16_1;
+            float4 u_xlat16_2;
+            float4 u_xlat16_4;
+            float4 u_xlat16_6;
+            u_xlat16_8.x = rate + (0.05 /*_DissolveOutlineSize1*/);
+            u_xlat16_8.y = u_xlat16_8.x + (-(0.0 /*_DissolveOutlineSize2*/));
+            u_xlat16_8.xy = dissolveDirMask.xx + (-u_xlat16_8.xy);
+            u_xlat16_38.xy = float4(0,0,0,0).xy + 0.00100000005f;
+            u_xlat16_38.xy = float2(1.0, 1.0) / u_xlat16_38.xy;
+            u_xlat16_8.xy = u_xlat16_38.xy * u_xlat16_8.xy;
+            u_xlat16_8.xy = clamp(u_xlat16_8.xy, 0.0, 1.0);
+            u_xlat16_11.xyz = diffuse.xyz * dissolveMap.x + (0.0 /*_DissolveOutlineOffset*/);
+            u_xlat16_12.xyz = u_xlat16_11.xyz * float4(1,1,1,1).xyz;
+            u_xlat16_11.xyz = u_xlat16_11.xyz * float4(0,0,0,0).xyz + (-u_xlat16_12.xyz);
+            u_xlat16_23.xyz = u_xlat16_8.yyy * u_xlat16_11.xyz + u_xlat16_12.xyz;
+            u_xlat16_3.x = u_xlat16_8.x + 1.0;
+            u_xlat16_3.x = u_xlat16_3.x + (-float4(1,1,1,1).w);
+            u_xlat16_3.x = clamp(u_xlat16_3.x, 0.0, 1.0);
+            u_xlat16_18.xyz = color.xyz * 1.0f + (-u_xlat16_23.xyz);
+            u_xlat16_18.xyz = u_xlat16_3.xxx * u_xlat16_18.xyz + u_xlat16_23.xyz;
+            u_xlat2.xyz = u_xlat16_18.xyz * 278.508514f + 10.7771997f;
+            u_xlat2.xyz = u_xlat2.xyz * u_xlat16_18.xyz;
+            u_xlat4.xyz = u_xlat16_18.xyz * 298.604492f + 88.7121964f;
+            u_xlat4.xyz = u_xlat16_18.xyz * u_xlat4.xyz + 80.6889038f;
+            u_xlat2.xyz = u_xlat2.xyz / u_xlat4.xyz;
+            u_xlat4.xyz = (-u_xlat2.xyz) + u_xlat16_18.xyz;
+            u_xlat7.xyz = u_xlat16_3.xxx * u_xlat4.xyz + u_xlat2.xyz;
+            color.xyz = u_xlat7.xyz;
+        }
     #endif
+}
+void heightlightlerp(float4 pos, inout float4 color)
+{
+    float height = pos.y + (-(0.0 /*_CharaWorldSpaceOffset*/));
+    float4 u_xlat16_30;
+    float u_xlat75;
+    float u_xlat76;
+    float4 u_xlat2;
+    float u_xlat27;
+    float4 u_xlat16_7;
+    u_xlat75 = height;
+    (u_xlat16_30.x = max((0.0 /*_ES_HeightLerpBottom*/), 0.001));
+    (u_xlat76 = (1.0 / u_xlat16_30.x));
+    (u_xlat76 = (u_xlat75 * u_xlat76));
+    (u_xlat76 = clamp(u_xlat76, 0.0, 1.0));
+    (u_xlat2.x = ((u_xlat76 * -2.0) + 3.0));
+    (u_xlat76 = (u_xlat76 * u_xlat76));
+    (u_xlat76 = (((-u_xlat2.x) * u_xlat76) + 1.0));
+    (u_xlat75 = (u_xlat75 + (-(1.0 /*_ES_HeightLerpTop*/))));
+    (u_xlat75 = (u_xlat75 + u_xlat75));
+    (u_xlat75 = clamp(u_xlat75, 0.0, 1.0));
+    (u_xlat2.x = ((u_xlat75 * -2.0) + 3.0));
+    (u_xlat75 = (u_xlat75 * u_xlat75));
+    (u_xlat27 = (u_xlat75 * u_xlat2.x));
+    (u_xlat16_30.x = ((-u_xlat76) + 1.0));
+    (u_xlat16_30.x = (((-u_xlat2.x) * u_xlat75) + u_xlat16_30.x));
+    (u_xlat16_30.x = clamp(u_xlat16_30.x, 0.0, 1.0));
+    (u_xlat16_7.xyz = ((float3)(u_xlat76) * float4(1,1,1,1).xyz));
+    (u_xlat16_30.xyz = (u_xlat16_30.xxx * float4(1,1,1,1).xyz));
+    (u_xlat16_30.xyz = (u_xlat16_30.xyz * float4(1,1,1,1).www));
+    (u_xlat16_30.xyz = ((u_xlat16_7.xyz * float4(1,1,1,1).www) + u_xlat16_30.xyz));
+    (u_xlat16_7.xyz = ((float3)(u_xlat27) * float4(1,1,1,1).xyz));
+    (u_xlat16_30.xyz = ((u_xlat16_7.xyz * float4(1,1,1,1).www) + u_xlat16_30.xyz));
+    (u_xlat16_30.xyz = clamp(u_xlat16_30.xyz, 0.0, 1.0));
+    (u_xlat16_30.xyz = (u_xlat16_30.xyz * color.xyz));
+    color.xyz = u_xlat16_30;
+}
+void swirl_dissolve(vs_out i, inout float4 output)
+{
+    float4 dis_color = i.v_col;
+    float disappear_range = dis_color.w * _DisStep.x;
+    dis_color.w = lerp(1.0f, _Disappear, disappear_range);
+    dis_color.xyz = dis_color.xyz * _InsideColor;
+    float2 _MaskCheck = (-i.uv.xy) + _MaskTex_ST.zw;
+    _MaskCheck = min(abs(_MaskCheck.xy), float2(1.0, 1.0));
+    float2 mask_uv = _MaskON ? i.uv.xy * _MaskTex_ST.xy + _MaskTex_ST.zw : _MaskCheck; 
+    float2 main_uv = i.uv.xy * float4(1,1,0,0).xy + float4(1,1,0,0).zw; // vs_TEXCOORD0.xy
+    float2 dissolve_uv = i.uv.xy * _DisTex_ST.xy + _DisTex_ST.zw; // vs_TEXCOORD1.xy
+    main_uv = _Time.yy * _MainSpeed.xy + main_uv;
+    dissolve_uv = _Time.yy * _DisRSpeed.xy + dissolve_uv;
+    float4 u_xlat16_0;
+    float4 u_xlat1;
+    float4 u_xlat16_1;
+    bool u_xlatb1;
+    float3 u_xlat16_2;
+    float4 u_xlat16_3;
+    float4 u_xlat4;
+    float4 u_xlat16_5;
+    float u_xlat16_6;
+    float u_xlat7;
+    float u_xlat16_8;
+    float u_xlat10;
+    float u_xlat16_12;
+    float u_xlat16_14;
+    float u_xlat16;
+    bool u_xlatb16;
+    float u_xlat16_18;
+    u_xlat16_0.xyz = _MaskChannel.xyz;
+    u_xlat16_0.w = _MaskChannelA;
+    u_xlat16_1 = _MaskTex.Sample(sampler_linear_repeat, mask_uv);
+    u_xlat16_0.x = dot(u_xlat16_1, u_xlat16_0);
+    u_xlat16_6 = dot(u_xlat16_1, _MaskTransparencyChannel);
+    u_xlat7 = mask_uv.y * mask_uv.x;
+    u_xlat1.x = (_MaskON) ? u_xlat16_0.x : u_xlat7;
+    u_xlat16_2.x = dis_color.w;
+    u_xlat7 = _DisTex.Sample(sampler_linear_repeat, dissolve_uv).x;
+    dissolve_uv.y = dissolve_uv.y + 0.5f;
+    u_xlat16_0.x = u_xlat7 + _DisRSpeed.z;
+    u_xlat16_12 = (_Mid != 0) ? u_xlat7 : 1.0;
+    u_xlat16_2.y = dis_color.w + _DisStep.y;
+    u_xlat16_2.z = u_xlat16_2.y + _SmoothStep.w;
+    u_xlat16_2.xyz = u_xlat1.xxx * u_xlat16_0.xxx + (-u_xlat16_2.xyz);
+    u_xlat16_3.xyz = 1.0 / _SmoothStep.xyz;
+    u_xlat16_2.xyz = u_xlat16_2.xyz * u_xlat16_3.xyz;
+    u_xlat16_2.xyz = clamp(u_xlat16_2.xyz, 0.0, 1.0);
+    u_xlat16_0.x = (_Mid != 0) ? u_xlat16_2.z : 0.0;
+    u_xlat1 = _MainTex.Sample(sampler_linear_repeat, main_uv);
+    u_xlat16_18 = dot(_MainChannel, u_xlat1);
+    u_xlat16_3.y = u_xlat16_18 * u_xlat1.w;
+    u_xlat16_3.x = dot(_MainChannelRGB, u_xlat1);
+    u_xlat16_3 = u_xlat16_3.xxxy;
+    u_xlat16_3 = clamp(u_xlat16_3, 0.0, 1.0);
+    u_xlat16_3 = (_CL == 2) ? u_xlat16_3 : u_xlat1;
+    u_xlat16_18 = dot(u_xlat1.xyz, _MainChannel.xyz);
+    u_xlat16_5.w = u_xlat16_18 * u_xlat1.w;
+    u_xlat16_5.w = clamp(u_xlat16_5.w, 0.0, 1.0);
+    u_xlat16_5.xyz = u_xlat1.xyz + _MainChannel.www;
+    u_xlat16_5.xyz = clamp(u_xlat16_5.xyz, 0.0, 1.0);
+    u_xlat16_1 = (_CL == 1) ? u_xlat16_5 : u_xlat16_3;
+    u_xlat16_3.xyz = u_xlat16_1.xyz * u_xlat16_12 + _MainSpeed.www;
+    u_xlat16_5.xyz = u_xlat16_3.xyz * _OutSideColor.xyz;
+    u_xlat16_3.xyz = _MidColor.xyz * u_xlat16_3.xyz + (-u_xlat16_5.xyz);
+    u_xlat16_0.xzw = u_xlat16_0.xxx * u_xlat16_3.xyz + u_xlat16_5.xyz;
+    u_xlat16_3.xyz = dis_color.xyz * u_xlat16_1.xyz + (-u_xlat16_0.xzw);
+    u_xlat16_0.xzw = u_xlat16_2.yyy * u_xlat16_3.xyz + u_xlat16_0.xzw;
+    u_xlat16_2.x = u_xlat16_1.w * u_xlat16_2.x;
+    u_xlat16_2.x = u_xlat16_2.x * _MidColor.w;
+    u_xlat16_0.xzw = u_xlat16_0.xzw * _MainSpeed.zzz;
+    u_xlat16_8 = 1;
+    u_xlat16_0.xzw = u_xlat16_0.xzw * u_xlat16_8;
+    u_xlat16_8 = 1;
+    u_xlat16_0.xzw = u_xlat16_0.xzw * u_xlat16_8;
+    u_xlat16_0.xzw = u_xlat16_0.xzw * 1;
+    u_xlat16_8 = max(u_xlat16_0.z, u_xlat16_0.x);
+    u_xlat16_8 = max(u_xlat16_0.w, u_xlat16_8);
+    u_xlat16_14 = _MaskTransparency * _MaskON;
+    u_xlat16_6 = (u_xlat16_14 == 0) ? u_xlat16_6 : 1.0;
+    u_xlat16_6 = u_xlat16_6 * u_xlat16_2.x;
+    u_xlat16_6 = u_xlat16_6 * 10.0;
+    u_xlat16_6 = clamp(u_xlat16_6, 0.0, 1.0);
+    u_xlat16_2.x = u_xlat16_6 * u_xlat16_8;
+    output.w = u_xlat16_6;
+    u_xlat4.x = max(u_xlat16_2.x, 0.00999999978);
+    u_xlat10 = u_xlat4.x + (-_ES_EP_EffectParticleBottom);
+    u_xlat16 = (-_ES_EP_EffectParticleBottom) + _ES_EP_EffectParticleTop;
+    u_xlat16 = 1.0 / u_xlat16;
+    u_xlat10 = u_xlat16 * u_xlat10;
+    u_xlat10 = clamp(u_xlat10, 0.0, 1.0);
+    u_xlat16 = u_xlat10 * -2.0 + 3.0;
+    u_xlat10 = u_xlat10 * u_xlat10;
+    u_xlat10 = u_xlat10 * u_xlat16;
+    u_xlat16_6 = (-_ES_EP_EffectParticleBottom) + _ES_EP_EffectParticleTop;
+    u_xlat16_6 = u_xlat10 * u_xlat16_6 + _ES_EP_EffectParticleBottom;
+    u_xlat10 = (-u_xlat4.x) + u_xlat16_6;
+    u_xlat10 = _ES_EP_EffectParticle * u_xlat10 + u_xlat4.x;
+    u_xlatb16 = _ES_EP_EffectParticleBottom<u_xlat4.x;
+    u_xlat10 = (u_xlatb16) ? u_xlat10 : u_xlat4.x;
+    u_xlat4.xzw = u_xlat16_0.xzw / u_xlat4.xxx;
+    u_xlat4.xyz = u_xlat10 * u_xlat4.xzw;
+    output.xyz = u_xlat4.xyz;
+    return;
+}
+float4 starry_sky(float4 color, float4 diffuse, float2 uv)
+{
+    if((0.0 /*_StarrySky*/))
+    {
+        float2 sky_uv = uv * float4(1,1,0,0).xy + float4(1,1,0,0).zw;
+        float2 mask_uv = uv * float4(1,1,0,0).xy + float4(1,1,0,0).zw;
+        float3 sky_tex = _SkyTex.Sample(sampler_linear_repeat, sky_uv);
+        float sky_mask = _SkyMask.Sample(sampler_linear_repeat, mask_uv).x;
+        float3 colored = diffuse * color;
+        diffuse.xyz = -diffuse * color + sky_tex;
+        diffuse.xyz = (sky_mask + (0.0 /*_SkyRange*/)) * diffuse + colored;
+        return diffuse;
+    }
+    else
+    {
+        return diffuse * color;
+    }
+}
+float4 starry_cloak(float4 sspos, float3 view, float2 uv, float4 position, float3 tangents, float4 out_color)
+{
+    float4 output;
+    float2 star_uv = sspos.xy/sspos.ww;
+    star_uv = length(view) * (star_uv + (float2)-0.5f) * (1.0 /*_SkyStarDepthScale*/);
+    star_uv = star_uv * float4(1,1,0,0).xy + float4(1,1,0,0).zw;
+    star_uv = _Time.yy * float4(0,0,0,0).xy + star_uv;
+    float3 skystar = (_SkyStarTex.Sample(sampler_linear_repeat, star_uv).xxx * float4(1,1,1,1)) * (1.0 /*_SkyStarTexScale*/).x;
+    float2 skymask = ((_SkyMask.Sample(sampler_linear_repeat, uv * float4(1,1,0,0).xy + float4(1,1,0,0).zw).xy + (0.0 /*_SkyRange*/)));
+    float2 mask_uv = uv.xy * float4(1,1,0,0).xy + float4(1,1,0,0).zw;
+    mask_uv = _Time.yy * (0.0 /*_SkyStarMaskTexSpeed*/).xx + mask_uv;
+    float mask = _SkyStarMaskTex.Sample(sampler_linear_repeat, mask_uv).x * (1.0 /*_SkyStarMaskTexScale*/);
+    float4 pos = mul(UNITY_MATRIX_V, position);
+    pos.xyz = pos / float3((1.0 /*_OSScale*/), (1.0 /*_OSScale*/).xx * 0.5.xx);
+    float3 spos = smoothstep(1.0f, -1.0f, position.yzx / ((1.0 /*_OSScale*/) * float3(0.5f, 0.5f, 1.0f)));
+    float2 pos_star_uv = spos.yz * 20.0f;
+    float star_tex_w = _SkyStarTex.Sample(sampler_linear_repeat, pos_star_uv).w;
+    float2 star_tex_yz = _SkyStarTex.Sample(sampler_linear_repeat, uv).yz;
+    float star_density = -star_tex_yz.x * (0.5 /*_StarDensity*/) + star_tex_w;
+    star_density = saturate(star_density / (-(0.5 /*_StarDensity*/)  + 1.0f));
+    float4 u_xlat6 = spos.xzyz * float4(1,1,0,0).xyxy + float4(1,1,0,0).zwzw;
+    float u_xlat16_48 = _SkyStarTex.Sample(sampler_linear_repeat, u_xlat6.xy).x;
+    float u_xlat16_49 = _SkyStarTex.Sample(sampler_linear_repeat, u_xlat6.zw).x;
+    float star_blend = lerp(u_xlat16_49, u_xlat16_48, star_tex_yz.y);
+    float3 stars = star_blend * (star_density * float4(1,1,1,1)) * (1.0 /*_SkyStarTexScale*/);
+    tangents = normalize(tangents);
+    float tdotv = dot(tangents, view);
+    float test = pow(1.0f - tdotv, 4.0f);
+    float u_xlat16_53 = (0.0 /*_SkyFresnelSmooth*/) + 0.5;
+    float2 u_xlat16_12 = (-float2((0.0 /*_SkyFresnelSmooth*/), (0.0 /*_SkyFresnelBaise*/))) + float2(0.5, 1.0);
+    float u_xlat16_3 = u_xlat16_12.y * test.x + (0.0 /*_SkyFresnelBaise*/);
+    u_xlat16_53 = u_xlat16_53 + (-u_xlat16_12.x);
+    u_xlat16_3.x = (-u_xlat16_12.x) + u_xlat16_3.x;
+    u_xlat16_53 = float(1.0) / u_xlat16_53;
+    u_xlat16_3.x = u_xlat16_3.x * u_xlat16_53;
+    u_xlat16_3.x = clamp(u_xlat16_3.x, 0.0, 1.0);
+    u_xlat16_53 = u_xlat16_3.x * -2.0 + 3.0;
+    u_xlat16_3.x = u_xlat16_3.x * u_xlat16_3.x;
+    u_xlat16_3.x = u_xlat16_3.x * u_xlat16_53;
+    float3 star_fresnel = (u_xlat16_3.xxx * (0.0 /*_SkyFresnelScale*/)) * float4(0,0,0,1);
+    float3 something = skystar.xyz * mask;
+    something = something * skymask.x;
+    output.xyz = (stars * skymask.x) * mask + -something;
+    output.xyz = (0.0 /*_StarMode*/) * output.xyz + something;
+    output.xyz = star_fresnel * skymask.y + output.xyz;
+    if((0.0 /*_StarsAreDiffuse*/)) out_color.xyz = lerp(out_color.xyz, 0.0f, skymask.x);
+    output.xyz = output.xyz + out_color.xyz;
+    output.w = out_color.w;
+    return output;
 }
 float3 DecodeLightProbe( float3 N )
 {

@@ -17,16 +17,10 @@ vs_out vs_base(vs_in v)
     o.v_col = v.v_col;    
     o.vertex = v.vertex;
     #if defined(can_dissolve)
-    if((0.0 /*_DissoveONM*/) && ((0.0 /*_DissolveMode*/) == 2.0))
-    {
-        dissolve_vertex(pos_ws, v.vertex, v.uv_1, v.uv_1, o.dis_pos, o.dis_uv);
-    } 
-    else if((0.0 /*_DissoveONM*/) && ((0.0 /*_DissolveMode*/) == 1.0))
-    {
-        o.dis_uv = float4(v.uv_2, v.uv_3);
-        o.dis_pos = v.vertex; // local pos first 
-        if((0.0 /*_UseWorldPosDissolve*/)) o.dis_pos = pos_ws; // world pos if needed
-    }
+        if((0.0 /*_DissoveON*/))
+        {
+            dissolve_vertex(v, o.dis_pos, o.dis_uv);
+        }
     #endif
     if((1.0 /*_FaceMaterial*/)) o.normal = 0.5f;
     o.grab = ComputeGrabScreenPos(o.pos);
@@ -128,15 +122,10 @@ vs_out vs_edge(vs_in v)
     o.uv = float4(v.uv_0, v.uv_1);
     o.v_col = v.v_col; 
     o.ws_pos = mul(unity_ObjectToWorld, v.vertex);
-    if((0.0 /*_DissoveONM*/) && ((0.0 /*_DissolveMode*/) == 2.0))
+    o.normal = mul((float3x3)unity_ObjectToWorld, v.normal);
+    if((0.0 /*_DissoveON*/) )
     {
-        dissolve_vertex(o.ws_pos, o.pos, v.uv_1, v.uv_1, o.dis_pos, o.dis_uv);
-    } 
-    else if((0.0 /*_DissoveONM*/) && ((0.0 /*_DissolveMode*/) == 1.0))
-    {
-        o.dis_uv = float4(v.uv_2, v.uv_3);
-        o.dis_pos = v.vertex; // local pos first 
-        if((0.0 /*_UseWorldPosDissolve*/)) o.dis_pos = o.ws_pos; // world pos if needed
+        dissolve_vertex(v, o.dis_pos, o.dis_uv);
     }
     return o;
 }
@@ -151,15 +140,9 @@ shadow_out vs_shadow(shadow_in v)
     float4 pos_wvp = mul(UNITY_MATRIX_VP, pos_ws);
     o.pos = pos_wvp;
     o.uv_a = float4(v.uv_0.xy, v.uv_1.xy);
-    if((0.0 /*_DissoveONM*/) && ((0.0 /*_DissolveMode*/) == 2.0))
+    if((0.0 /*_DissoveON*/) )
     {
-        dissolve_vertex(pos_ws, v.vertex, v.uv_1, v.uv_1, o.dis_pos, o.dis_uv);
-    } 
-    else if((0.0 /*_DissoveONM*/) && ((0.0 /*_DissolveMode*/) == 1.0))
-    {
-        o.dis_uv = float4(v.uv_2, (float2)0.0f);
-        o.dis_pos = v.vertex; // local pos first 
-        if((0.0 /*_UseWorldPosDissolve*/)) o.dis_pos = o.ws_pos; // world pos if needed
+        dissolve_vertex(v, o.dis_pos, o.dis_uv);
     }
     TRANSFER_SHADOW_CASTER_NORMALOFFSET(o)
     return o;
@@ -172,7 +155,6 @@ float4 ps_base(vs_out i, bool vface : SV_IsFrontFace) : SV_Target
     float transparnecy_check = (0.0 /*_IsTransparent*/);
     float testTresh =(0.0 /*_AlphaTestThreshold*/);
     if((0.0 /*_IsTransparent*/)) testTresh = 0.0f;
-    if((0.0 /*_DissoveONM*/) && ((0.0 /*_DissolveMode*/) == 2.0)) dissolve_clip(ws_pos, i.dis_pos, i.dis_uv, i.uv.zw);
     float3 normal    = normalize(i.normal);
     float3 vs_normal = normalize(mul((float3x3)UNITY_MATRIX_V, normal));
     float3 view      = normalize(i.view);
@@ -186,40 +168,46 @@ float4 ps_base(vs_out i, bool vface : SV_IsFrontFace) : SV_Target
     float3 emission_color = (float3)0.0f;
     float emis_area = 0.0f;
     float3 test_normal = normal;
+    float3 tangents = i.tangent.xyz;
     float4 color = ((0.0 /*_HairMaterial*/)) ? float4(1,1,1,1) * float4(1,1,1,1) : float4(1,1,1,1);
     if(!vface && (1.0 /*_backfdceuv2*/)) // use uv2 if vface is false
     { // so basically if its a backfacing face
         uv.xy = i.uv.zw;
         color = float4(1,1,1,1);
         normal.z = normal.z * -1.0f;
+        tangents.z = tangents.z * -1.0f;
     }
     color.a = 1.0f; // this prevents issues with the alpha value of the material being less than 1
+    if((0.0 /*_DissoveON*/))
+    {
+        dissolve_clip(ws_pos, i.dis_pos, i.dis_uv, uv);
+    }
     float4 out_color = color;
     float3 half_vector = normalize(view + _WorldSpaceLightPos0);
     float ndotl = dot(normal, light);
     float ndoth = dot(normal, half_vector);
     float ndotv = dot(normal, view);
     float4 diffuse = _MainTex.Sample(sampler_MainTex, uv);
-    float4 lightmap = _LightMap.Sample(sampler_LightMap, uv);
-    float lightmap_alpha = _LightMap.Sample(sampler_LightMap, i.uv.xy).w;
+    float4 lightmap = _LightMap.Sample(sampler_linear_repeat, uv);
+    float lightmap_alpha = _LightMap.Sample(sampler_linear_repeat, i.uv.xy).w;
     #if defined(faceishadow)
-        float4 facemap = _FaceMap.Sample(sampler_FaceMap, uv);
-        float4 faceexp = _FaceExpression.Sample(sampler_LightMap, uv);
+        float4 facemap = _FaceMap.Sample(sampler_linear_repeat, uv);
+        float4 faceexp = _FaceExpression.Sample(sampler_linear_repeat, uv);
     #endif
     #if defined(use_emission)
-        float4 emistex = _EmissionTex.Sample(sampler_LightMap, uv);
+        float4 emistex = _EmissionTex.Sample(sampler_linear_repeat, uv);
     #endif
     #if defined(second_diffuse)
         if((0.0 /*_UseSecondaryTex*/))
         {
-            float4 secondary = _SecondaryDiff.Sample(sampler_MainTex, uv);
+            float4 secondary = _SecondaryDiff.Sample(sampler_linear_repeat, uv);
             diffuse = lerp(diffuse, secondary, (0.0 /*_SecondaryFade*/));
         }
     #endif
     #if defined(can_shift)
-        float diffuse_mask = packed_channel_picker(sampler_LightMap, _HueMaskTexture, uv, (0.0 /*_DiffuseMaskSource*/));
-        float rim_mask = packed_channel_picker(sampler_LightMap, _HueMaskTexture, uv, (0.0 /*_RimMaskSource*/));
-        float emission_mask = packed_channel_picker(sampler_LightMap, _HueMaskTexture, uv, (0.0 /*_EmissionMaskSource*/));
+        float diffuse_mask = packed_channel_picker(sampler_linear_repeat, _HueMaskTexture, uv, (0.0 /*_DiffuseMaskSource*/));
+        float rim_mask = packed_channel_picker(sampler_linear_repeat, _HueMaskTexture, uv, (0.0 /*_RimMaskSource*/));
+        float emission_mask = packed_channel_picker(sampler_linear_repeat, _HueMaskTexture, uv, (0.0 /*_EmissionMaskSource*/));
         if(!(0.0 /*_UseHueMask*/)) 
         {
             diffuse_mask = 1.0f;
@@ -239,6 +227,16 @@ float4 ps_base(vs_out i, bool vface : SV_IsFrontFace) : SV_Target
     float4 lut_rimsval = _MaterialValuesPackLUT.Load(float4(material_ID, 6, 0, 0)); // x: rim shadow width, y: rim shadow feather 
     float4 lut_bloomval = _MaterialValuesPackLUT.Load(float4(material_ID, 7, 0, 0)); // x: rim shadow width, y: rim shadow feather 
     #if defined (_IS_PASS_BASE)
+        if(_EnableParticleSwirl)
+        {
+            swirl_dissolve(i, out_color);
+        }
+        float3 GI_color = DecodeLightProbe(normal);
+        GI_color = GI_color < float3(1,1,1) ? GI_color : float3(1,1,1);
+        float GI_intensity = 0.299f * GI_color.r + 0.587f * GI_color.g + 0.114f * GI_color.b;
+        GI_intensity = GI_intensity < 1 ? GI_intensity : 1.0f;
+        float3 ambient_color = max(half3(0.05f, 0.05f, 0.05f), max(ShadeSH9(half4(0.0, 0.0, 0.0, 1.0)),ShadeSH9(half4(0.0, -1.0, 0.0, 1.0)).rgb));
+        float3 light_color = max(ambient_color, _LightColor0.rgb);
         #if defined(use_rimlight)
             float rimwidth = (1.0 /*_RimWidth*/); 
             float2 rimoffset = float4(0,0,0,0);
@@ -301,8 +299,7 @@ float4 ps_base(vs_out i, bool vface : SV_IsFrontFace) : SV_Target
             rim_depth = pow(rim_depth, rim_values[curr_region].w); 
             rim_depth = smoothstep(0.0f, rim_width, rim_depth);
             rim_depth = rim_depth * saturate(lerp(1.0f, lightmap.r, (1.0 /*_RimLightMode*/)));
-            rim_light = (rim_color[curr_region].xyz * rim_depth * (1.0 /*_Rimintensity*/)) * (0.1 /*_ES_Rimintensity*/) * max(0.5f, camera_dist) * saturate(vface);
-            rim_light = rim_light;
+            if((0.0 /*_EnableRimLight*/)) rim_light = (rim_color[curr_region].xyz * rim_depth * (1.0 /*_Rimintensity*/)) * (0.1 /*_ES_Rimintensity*/) * max(0.5f, camera_dist) * saturate(vface);
             #if defined(can_shift)
                 if((1.0 /*_EnableRimHue*/)) rim_light.xyz = hue_shift(rim_light.xyz, curr_region, (0.0 /*_RimHue*/), (0.0 /*_RimHue2*/), (0.0 /*_RimHue3*/), (0.0 /*_RimHue4*/), (0.0 /*_RimHue5*/), (0.0 /*_RimHue6*/), (0.0 /*_RimHue7*/), (0.0 /*_RimHue8*/), (0.0 /*_GlobalRimHue*/), (0.0 /*_AutomaticRimShift*/), (0.0 /*_ShiftRimSpeed*/), rim_mask);
             #endif
@@ -333,8 +330,10 @@ float4 ps_base(vs_out i, bool vface : SV_IsFrontFace) : SV_Target
             #endif
                 if((1.0 /*_FaceMaterial*/))
             {
-                float eye_emis = (facemap.x > 0.45f) && (facemap.x < 0.55f);
-                emis_area = emis_area + eye_emis;
+                #if defined(faceishadow)
+                    float eye_emis = (facemap.x > 0.45f) && (facemap.x < 0.55f);
+                    emis_area = emis_area + eye_emis;
+                #endif
             }
         #endif
         float4 mat_color[8] = 
@@ -343,69 +342,112 @@ float4 ps_base(vs_out i, bool vface : SV_IsFrontFace) : SV_Target
         };
         if(!(0.0 /*_HairMaterial*/))out_color = out_color * mat_color[material_ID];
         float3 shadow_color = (float3)1.0f;
+        float shadow_area = 1.0f;
         #if defined(use_shadow)
-            float shadow_area = shadow_rate((ndotl), (lightmap.y), vcol.x, (1.0 /*_ShadowRamp*/));
-            if((0.0 /*_BaseMaterial*/)) shadow_area = lerp((0.0 /*_SelfShadowDarken*/), shadow_area, unity_shadow);
-            float2 ramp_uv = {shadow_area, ramp_ID};
-            float3 warm_ramp = _DiffuseRampMultiTex.Sample(sampler_DiffuseRampMultiTex, ramp_uv).xyz; 
-            float3 cool_ramp = _DiffuseCoolRampMultiTex.Sample(sampler_DiffuseRampMultiTex, ramp_uv).xyz;
-            shadow_color = lerp(warm_ramp, cool_ramp, 0.0f);
-            #if defined(faceishadow)
-                if((1.0 /*_FaceMaterial*/))
+            if((0.0 /*_EnableShadow*/) == 1)
+            {
+                shadow_area = shadow_rate((ndotl), (lightmap.y), vcol.x, (1.0 /*_ShadowRamp*/));
+                if((0.0 /*_BaseMaterial*/)) shadow_area = lerp((0.0 /*_SelfShadowDarken*/), shadow_area, unity_shadow);
+                float2 ramp_uv = {shadow_area, ramp_ID};
+                float3 warm_ramp = _DiffuseRampMultiTex.Sample(sampler_linear_clamp, ramp_uv).xyz; 
+                float3 cool_ramp = _DiffuseCoolRampMultiTex.Sample(sampler_linear_clamp, ramp_uv).xyz;
+                shadow_color = lerp(warm_ramp, cool_ramp, 0.0f);
+                #if defined(faceishadow)
+                    if((1.0 /*_FaceMaterial*/))
+                    {
+                        float face_sdf_right = _FaceMap.Sample(sampler_linear_repeat, uv).w;
+                        float face_sdf_left  = _FaceMap.Sample(sampler_linear_repeat, float2(1.0f - uv.x, uv.y)).w;
+                        shadow_area = shadow_rate_face(uv, light);
+                        shadow_color = lerp(float4(0.2140411,0.2140411,0.2140411,1), 1.0f, shadow_area);
+                    }
+                #endif
+                if ((0.0 /*_ES_LEVEL_ADJUST_ON*/))
                 {
-                    float face_sdf_right = _FaceMap.Sample(sampler_FaceMap, uv).w;
-                    float face_sdf_left  = _FaceMap.Sample(sampler_FaceMap, float2(1.0f - uv.x, uv.y)).w;
-                    shadow_area = shadow_rate_face(uv, light);
-                    shadow_color = lerp(float4(0.2140411,0.2140411,0.2140411,1), 1.0f, shadow_area);
+                    float isSkin = (material_ID < 1) ? 0.0 : 1.0;
+                    isSkin = ((1.0 /*_FaceMaterial*/)) ? 0.0 : isSkin;
+                    isSkin = ((0.0 /*_HairMaterial*/)) ? 1.0 : isSkin;
+                    float3 skinLightColorAdjustment = (float3)0.0;
+                    float3 highlightColorAdjustment = (float3)0.0;
+                    float3 skinShadowColorAdjustment = (float3)0.0;
+                    float3 shadowColorAdjustment = (float3)0.0;
+                    float3 isSkinVector = (float3)isSkin;
+                    float3 tempAdjustment = (float3)0.0;
+                    skinLightColorAdjustment = float4(1,1,1,0.5).www * float4(1,1,1,0.5).xyz;
+                    skinLightColorAdjustment *= 2.0;
+                    highlightColorAdjustment = float4(1,1,1,0.5).www * float4(1,1,1,0.5).xyz;
+                    highlightColorAdjustment = (highlightColorAdjustment * 2.0) - skinLightColorAdjustment;
+                    skinLightColorAdjustment = (isSkinVector * highlightColorAdjustment) + skinLightColorAdjustment;
+                    skinLightColorAdjustment = max(skinLightColorAdjustment, 0.01f);
+                    skinShadowColorAdjustment = float4(1,1,1,0.5).www * float4(1,1,1,0.5).xyz;
+                    skinShadowColorAdjustment *= 2.0;
+                    shadowColorAdjustment = float4(1,1,1,0.5).www * float4(1,1,1,0.5).xyz;
+                    shadowColorAdjustment = (shadowColorAdjustment * 2.0) - skinShadowColorAdjustment;
+                    skinShadowColorAdjustment = (isSkinVector * shadowColorAdjustment) + skinShadowColorAdjustment;
+                    skinShadowColorAdjustment = max(skinShadowColorAdjustment, 0.01f);
+                    shadowColorAdjustment = shadow_color.xyz - (float3((0.55 /*_ES_LevelMid*/), (0.55 /*_ES_LevelMid*/), (0.55 /*_ES_LevelMid*/)));
+                    tempAdjustment.xz = float2((1.0 /*_ES_LevelHighLight*/), (0.55 /*_ES_LevelMid*/)) - float2((0.55 /*_ES_LevelMid*/), (0.0 /*_ES_LevelShadow*/));
+                    shadowColorAdjustment /= tempAdjustment.xxx;
+                    shadowColorAdjustment = (shadowColorAdjustment * 0.5) + 0.5;
+                    shadowColorAdjustment = clamp(shadowColorAdjustment, 0.0, 1.0);
+                    skinLightColorAdjustment *= shadowColorAdjustment;
+                    shadowColorAdjustment = -shadow_color.xyz + float3((0.55 /*_ES_LevelMid*/), (0.55 /*_ES_LevelMid*/), (0.55 /*_ES_LevelMid*/));
+                    shadowColorAdjustment /= tempAdjustment.zzz;
+                    shadowColorAdjustment = (-shadowColorAdjustment * 0.5) + 0.5;
+                    shadowColorAdjustment = clamp(shadowColorAdjustment, 0.0, 1.0);
+                    skinShadowColorAdjustment *= shadowColorAdjustment;
+                    shadow_color.xyz = (shadow_area < 0.9f) ? skinLightColorAdjustment : skinShadowColorAdjustment;
                 }
-            #endif
+            }
         #endif
         #if defined(use_specular)
-            float4 specular_color[8] =
+            if((0.0 /*_EnableSpecular*/))
             {
-                float4(1,1,1,1),
-                float4(1,1,1,1),
-                float4(1,1,1,1),
-                float4(1,1,1,1),
-                float4(1,1,1,1),
-                float4(1,1,1,1),
-                float4(1,1,1,1),
-                float4(1,1,1,1),
-            };
-            float3 specular_values[8] =
-            {
-                float3((10.0 /*_SpecularShininess0*/), (0.02 /*_SpecularRoughness0*/), (1.0 /*_SpecularIntensity0*/)),
-                float3((10.0 /*_SpecularShininess1*/), (0.02 /*_SpecularRoughness1*/), (1.0 /*_SpecularIntensity1*/)),
-                float3((10.0 /*_SpecularShininess2*/), (0.02 /*_SpecularRoughness2*/), (1.0 /*_SpecularIntensity2*/)),
-                float3((10.0 /*_SpecularShininess3*/), (0.02 /*_SpecularRoughness3*/), (1.0 /*_SpecularIntensity3*/)),
-                float3((10.0 /*_SpecularShininess4*/), (0.02 /*_SpecularRoughness4*/), (1.0 /*_SpecularIntensity4*/)),
-                float3((10.0 /*_SpecularShininess5*/), (0.02 /*_SpecularRoughness5*/), (1.0 /*_SpecularIntensity5*/)),
-                float3((10.0 /*_SpecularShininess6*/), (0.02 /*_SpecularRoughness6*/), (1.0 /*_SpecularIntensity6*/)),
-                float3((10.0 /*_SpecularShininess7*/), (0.02 /*_SpecularRoughness7*/), (1.0 /*_SpecularIntensity7*/)),
-            };
-            if((0.0 /*_UseMaterialValuesLUT*/))
-            {
-                specular_color[curr_region] = lut_speccol;
-                specular_values[curr_region] = lut_specval.xyz * float3(10.0f, 2.0f, 2.0f); // weird fix, not accurate to ingame code but whatever if it works it works
+                float4 specular_color[8] =
+                {
+                    float4(1,1,1,1),
+                    float4(1,1,1,1),
+                    float4(1,1,1,1),
+                    float4(1,1,1,1),
+                    float4(1,1,1,1),
+                    float4(1,1,1,1),
+                    float4(1,1,1,1),
+                    float4(1,1,1,1),
+                };
+                float3 specular_values[8] =
+                {
+                    float3((10.0 /*_SpecularShininess0*/), (0.02 /*_SpecularRoughness0*/), (1.0 /*_SpecularIntensity0*/)),
+                    float3((10.0 /*_SpecularShininess1*/), (0.02 /*_SpecularRoughness1*/), (1.0 /*_SpecularIntensity1*/)),
+                    float3((10.0 /*_SpecularShininess2*/), (0.02 /*_SpecularRoughness2*/), (1.0 /*_SpecularIntensity2*/)),
+                    float3((10.0 /*_SpecularShininess3*/), (0.02 /*_SpecularRoughness3*/), (1.0 /*_SpecularIntensity3*/)),
+                    float3((10.0 /*_SpecularShininess4*/), (0.02 /*_SpecularRoughness4*/), (1.0 /*_SpecularIntensity4*/)),
+                    float3((10.0 /*_SpecularShininess5*/), (0.02 /*_SpecularRoughness5*/), (1.0 /*_SpecularIntensity5*/)),
+                    float3((10.0 /*_SpecularShininess6*/), (0.02 /*_SpecularRoughness6*/), (1.0 /*_SpecularIntensity6*/)),
+                    float3((10.0 /*_SpecularShininess7*/), (0.02 /*_SpecularRoughness7*/), (1.0 /*_SpecularIntensity7*/)),
+                };
+                if((0.0 /*_UseMaterialValuesLUT*/))
+                {
+                    specular_color[curr_region] = lut_speccol;
+                    specular_values[curr_region] = lut_specval.xyz * float3(10.0f, 2.0f, 2.0f); // weird fix, not accurate to ingame code but whatever if it works it works
+                }
+                if((1.0 /*_FaceMaterial*/))
+                {
+                    specular_color[curr_region] = (float4)0.0f;
+                }
+                specular_values[curr_region].z = max(0.0f, specular_values[curr_region].z); // why would there ever be a reason for a negative specular intensity
+                specular = specular_base(shadow_area, ndoth, lightmap.z, specular_color[curr_region], specular_values[curr_region], float4(1,1,1,1), (0.5 /*_ES_SPIntensity*/));
             }
-            if((1.0 /*_FaceMaterial*/))
-            {
-                specular_color[curr_region] = (float4)0.0f;
-            }
-            specular_values[curr_region].z = max(0.0f, specular_values[curr_region].z); // why would there ever be a reason for a negative specular intensity
-            specular = specular_base(shadow_area, ndoth, lightmap.z, specular_color[curr_region], specular_values[curr_region], float4(1,1,1,1), (0.5 /*_ES_SPIntensity*/));
-        #endif
+          #endif
         #if defined(use_stocking)
             float2 tile_uv = uv.xy * float4(1,1,0,0).xy + float4(1,1,0,0).zw;
-            float stock_tile = _StockRangeTex.Sample(sampler_LightMap, tile_uv).z; 
+            float stock_tile = _StockRangeTex.Sample(sampler_linear_repeat, tile_uv).z; 
             stock_tile = stock_tile * 0.5f - 0.5f;
             stock_tile = (1.0 /*_StockRoughness*/) * stock_tile + 1.0f;
-            float4 stocking_tex = _StockRangeTex.Sample(sampler_LightMap, uv.xy);
+            float4 stocking_tex = _StockRangeTex.Sample(sampler_linear_repeat, uv.xy);
             float stock_area = (stocking_tex.x > 0.001f) ? 1.0f : 0.0f;
             float offset_ndotv = dot(normal, normalize(view - float4(0,0,0,0)));
             float stock_rim = max(0.001f, ndotv);
-            (1.0 /*_Stockpower*/) = max(0.039f, (1.0 /*_Stockpower*/));
-            stock_rim = smoothstep((1.0 /*_Stockpower*/), (0.5 /*_StockDarkWidth*/) * (1.0 /*_Stockpower*/), stock_rim) * (0.25 /*_StockSP*/);
+            float stock_power = max(0.039f, (1.0 /*_Stockpower*/));
+            stock_rim = smoothstep(stock_power, (0.5 /*_StockDarkWidth*/) * stock_power, stock_rim) * (0.25 /*_StockSP*/);
             stocking_tex.x = stocking_tex.x * stock_area * stock_rim;
             float3 stock_dark_area = (float3)-1.0f * float4(1,1,1,1);
             stock_dark_area = stocking_tex.x * stock_dark_area + (float3)1.0f;
@@ -438,18 +480,17 @@ float4 ps_base(vs_out i, bool vface : SV_IsFrontFace) : SV_Target
                 diffuse.xyz = diffuse.xyz * expressions;
             } 
         #endif
-        float3 GI_color = DecodeLightProbe(normal);
-        GI_color = GI_color < float3(1,1,1) ? GI_color : float3(1,1,1);
-        float GI_intensity = 0.299f * GI_color.r + 0.587f * GI_color.g + 0.114f * GI_color.b;
-        GI_intensity = GI_intensity < 1 ? GI_intensity : 1.0f;
-        float3 ambient_color = max(half3(0.05f, 0.05f, 0.05f), max(ShadeSH9(half4(0.0, 0.0, 0.0, 1.0)),ShadeSH9(half4(0.0, -1.0, 0.0, 1.0)).rgb));
-        float3 light_color = max(ambient_color, _LightColor0.rgb);
         #if defined(use_stocking)
             if((0.0 /*_EnableStocking*/)) diffuse.xyz = stocking;
         #endif
-        out_color = out_color * diffuse;
+        out_color = ((0.0 /*_StarrySky*/) && !(1.0 /*_FaceMaterial*/) && !(0.0 /*_HairMaterial*/)) ? starry_sky(diffuse, out_color, uv) : out_color * diffuse;
         if((0.0 /*_EnableAlphaCutoff*/)) clip(diffuse.w - saturate(testTresh));
-        out_color.xyz = out_color * shadow_color + (specular); 
+        #if defined(use_shadow)
+            out_color.xyz = ((0.0 /*_EnableShadow*/) == 1) ? out_color * shadow_color : out_color; 
+        #endif
+        #if defined(use_specular)
+            out_color.xyz = ((0.0 /*_EnableSpecular*/) == 1) ? out_color + specular : out_color; 
+        #endif
         #if defined(can_shift)
             if((1.0 /*_EnableColorHue*/)) out_color.xyz = hue_shift(out_color.xyz, curr_region, (0.0 /*_ColorHue*/), (0.0 /*_ColorHue2*/), (0.0 /*_ColorHue3*/), (0.0 /*_ColorHue4*/), (0.0 /*_ColorHue5*/), (0.0 /*_ColorHue6*/), (0.0 /*_ColorHue7*/), (0.0 /*_ColorHue8*/), (0.0 /*_GlobalColorHue*/), (0.0 /*_AutomaticColorShift*/), (0.0 /*_ShiftColorSpeed*/), diffuse_mask);
         #endif
@@ -457,8 +498,9 @@ float4 ps_base(vs_out i, bool vface : SV_IsFrontFace) : SV_Target
             if((0 /*_EnableEmission*/) > 0) out_color.xyz = emis_area * (out_color.xyz * emission_color) + out_color.xyz;
         #endif
         #if defined(use_rimlight)
-            if(!(1.0 /*_FaceMaterial*/)) out_color.xyz = lerp(out_color.xyz.xyz - rim_light.xyz, out_color.xyz + rim_light.xyz, rim_values[curr_region].z);
+            if(!(1.0 /*_FaceMaterial*/) && (0.0 /*_EnableRimLight*/)) out_color.xyz = lerp(out_color.xyz.xyz - rim_light.xyz, out_color.xyz + rim_light.xyz, rim_values[curr_region].z);
         #endif
+        if((0.0 /*_StarrySky*/)) out_color = starry_cloak(i.ss_pos, i.view, uv, i.ws_pos, tangents, out_color);
         if(!(0.0 /*_IsTransparent*/) && !(0.0 /*_EnableAlphaCutoff*/)) out_color.w = 1.0f;
         if((0.0 /*_EyeShadowMat*/)) out_color = float4(1,1,1,1);
         float3 up      = UnityObjectToWorldDir(float4(0,1,0,0).xyz);
@@ -484,27 +526,33 @@ float4 ps_base(vs_out i, bool vface : SV_IsFrontFace) : SV_Target
                 float3 caus_b = (float3)0.0f;
                 if((0.0 /*_EnableSplit*/))
                 {
-                    float caus_a_r = _CausTexture.Sample(sampler_LightMap, caus_uv_a + float2((0.0 /*_CausSplit*/), (0.0 /*_CausSplit*/))).x;
-                    float caus_a_g = _CausTexture.Sample(sampler_LightMap, caus_uv_a + float2((0.0 /*_CausSplit*/), -(0.0 /*_CausSplit*/))).x;
-                    float caus_a_b = _CausTexture.Sample(sampler_LightMap, caus_uv_a + float2(-(0.0 /*_CausSplit*/), -(0.0 /*_CausSplit*/))).x;
-                    float caus_b_r = _CausTexture.Sample(sampler_LightMap, caus_uv_b + float2((0.0 /*_CausSplit*/), (0.0 /*_CausSplit*/))).x;
-                    float caus_b_g = _CausTexture.Sample(sampler_LightMap, caus_uv_b + float2((0.0 /*_CausSplit*/), -(0.0 /*_CausSplit*/))).x;
-                    float caus_b_b = _CausTexture.Sample(sampler_LightMap, caus_uv_b + float2(-(0.0 /*_CausSplit*/), -(0.0 /*_CausSplit*/))).x;
+                    float caus_a_r = _CausTexture.Sample(sampler_linear_repeat, caus_uv_a + float2((0.0 /*_CausSplit*/), (0.0 /*_CausSplit*/))).x;
+                    float caus_a_g = _CausTexture.Sample(sampler_linear_repeat, caus_uv_a + float2((0.0 /*_CausSplit*/), -(0.0 /*_CausSplit*/))).x;
+                    float caus_a_b = _CausTexture.Sample(sampler_linear_repeat, caus_uv_a + float2(-(0.0 /*_CausSplit*/), -(0.0 /*_CausSplit*/))).x;
+                    float caus_b_r = _CausTexture.Sample(sampler_linear_repeat, caus_uv_b + float2((0.0 /*_CausSplit*/), (0.0 /*_CausSplit*/))).x;
+                    float caus_b_g = _CausTexture.Sample(sampler_linear_repeat, caus_uv_b + float2((0.0 /*_CausSplit*/), -(0.0 /*_CausSplit*/))).x;
+                    float caus_b_b = _CausTexture.Sample(sampler_linear_repeat, caus_uv_b + float2(-(0.0 /*_CausSplit*/), -(0.0 /*_CausSplit*/))).x;
                     caus_a = float3(caus_a_r, caus_a_g, caus_a_b);
                     caus_b = float3(caus_b_r, caus_b_g, caus_b_b);
                 }
                 else
                 {
-                    caus_a = _CausTexture.Sample(sampler_LightMap, caus_uv_a).xxx;
-                    caus_b = _CausTexture.Sample(sampler_LightMap, caus_uv_b).xxx;
+                    caus_a = _CausTexture.Sample(sampler_linear_repeat, caus_uv_a).xxx;
+                    caus_b = _CausTexture.Sample(sampler_linear_repeat, caus_uv_b).xxx;
                 }
                 float3 caus = min(caus_a, caus_b);  
                 caus = pow(caus, (1.0 /*_CausExp*/)) * float4(1,1,1,1) * (1.0 /*_CausInt*/);      
                 out_color.xyz = out_color.xyz + caus;
             }   
-        #endif
-        out_color.xyz = out_color.xyz * light_color;
-        out_color.xyz = out_color.xyz + (GI_color * GI_intensity * _GI_Intensity * smoothstep(1.0f ,0.0f, GI_intensity / 2.0f));
+        #endif 
+        float filter = 1.0f;
+        if((0.0 /*_StarrySky*/) && !(1.0 /*_StarAffectedByLight*/))
+        {
+            filter = saturate(1.0f - (_SkyMask.Sample(sampler_linear_repeat, uv * float4(1,1,0,0).xy + float4(1,1,0,0).zw).x + (0.0 /*_SkyRange*/)));
+        }
+        float3 light_applied_color = out_color.xyz * light_color;
+        light_applied_color.xyz = light_applied_color.xyz + (GI_color * GI_intensity * _GI_Intensity * smoothstep(1.0f ,0.0f, GI_intensity / 2.0f));
+        out_color.xyz = lerp(out_color.xyz, light_applied_color, filter);
         float shadow_mask = (dot(normal, light) * .5 + .5);
         shadow_mask = smoothstep(0.5, 0.7, shadow_mask);
         #if defined (_is_shadow)
@@ -517,6 +565,7 @@ float4 ps_base(vs_out i, bool vface : SV_IsFrontFace) : SV_Target
             out_color.xyz = lerp(saturate(float4(0.2140411,0.2140411,0.2140411,1)), 1.0f, mask);
             if(!_HairMaterial||!(0.0 /*_UseSelfShadow*/)) clip(-1);
         #endif
+        if((0.0 /*_UseHeightLerp*/)) heightlightlerp(ws_pos, out_color);
         if((0.0 /*_DebugMode*/) && ((0.0 /*_DebugLights*/) == 1)) out_color.xyz = 0.0f;
     #endif
     #if defined (_IS_PASS_LIGHT)
@@ -526,15 +575,16 @@ float4 ps_base(vs_out i, bool vface : SV_IsFrontFace) : SV_Target
         #endif
         ndotl = dot(normal, light);
         float3 shadow_area = (float3)1.0f;
-        shadow_area = shadow_rate(ndotl, lightmap.y, i.v_col.x, 2.0f);
+        shadow_area = shadow_rate(ndotl, lightmap.y, i.v_col.x, 1.0f);
         #if defined(faceishadow)
-            if((1.0 /*_FaceMaterial*/)) shadow_area = dot((float3)0.5f, light);
+            ndotl = dot(float3(0.5f, 0.5f, 1.0f), light);
+            if((1.0 /*_FaceMaterial*/)) shadow_area = ndotl;
         #endif
         float light_intesnity = max(0.001f, (0.299f * _LightColor0.r + 0.587f * _LightColor0.g + 0.114f * _LightColor0.b));
-        float3 light_pass_color = ((diffuse.xyz * 1.0f) * _LightColor0.xyz) * atten * shadow_area * 0.5f;
+        float3 light_pass_color = ((diffuse.xyz * 1.0f) * _LightColor0.xyz) * atten * saturate(shadow_area);
         float3 light_color = lerp(light_pass_color.xyz, lerp(0.0f, min(light_pass_color, light_pass_color / light_intesnity), _WorldSpaceLightPos0.w), (1.0 /*_FilterLight*/)); // prevents lights from becoming too intense
         #if defined(POINT) || defined(SPOT)
-        out_color.xyz = (light_color) * 0.5f;
+        out_color.xyz = (light_color);
         #elif defined(DIRECTIONAL)
         out_color.xyz = 0.0f; // dont let extra directional lights add onto the model, this will fuck a lot of shit up
         #endif
@@ -692,25 +742,32 @@ float4 ps_base(vs_out i, bool vface : SV_IsFrontFace) : SV_Target
         } 
     #endif
     #if defined(can_dissolve)
-        if((0.0 /*_DissoveONM*/) && ((0.0 /*_DissolveMode*/) == 2.0)) out_color.xyzw = dissolve_color(i.ws_pos, i.dis_pos, i.dis_uv, i.uv.zw, out_color);
-        if(((0.0 /*_DissoveONM*/)) && ((0.0 /*_DissolveMode*/) == 1.0f))
-        {
-            float alpha = 1.0f;
-            simple_dissolve(out_color.xyzw, i.uv.xy, i.uv.zw, i.dis_uv.xy, i.dis_pos, out_color.xyz, alpha);
-            clip(out_color.w - (0.0 /*_DissolveClipRate*/));
-            out_color.w = out_color.w * alpha;
-        }
+    if((0.0 /*_DissoveON*/))
+    {
+        dissolve_color(ws_pos, i.dis_pos, i.dis_uv, uv, diffuse, out_color);
+    }
     #endif
     return out_color;
 }
 float4 ps_edge(vs_out i, bool vface : SV_IsFrontFace) : SV_Target
 {
+    float4 ws_pos = mul(unity_ObjectToWorld, i.ws_pos);
     float2 uv  = i.uv.xy;
     #if defined(can_dissolve)
-        if((0.0 /*_DissoveONM*/) && ((0.0 /*_DissolveMode*/) == 2.0)) dissolve_clip(i.ws_pos, i.dis_pos, i.dis_uv, i.uv.xy);
+    if((0.0 /*_DissoveON*/))
+    {
+        dissolve_clip(ws_pos, i.dis_pos, i.dis_uv, uv);
+    }
     #endif
-    float lightmap = _LightMap.Sample(sampler_LightMap, uv).w;
+    float lightmap = _LightMap.Sample(sampler_linear_repeat, uv).w;
     float alpha = _MainTex.Sample(sampler_MainTex, uv).w;
+    float3 GI_color = DecodeLightProbe(normalize(i.normal));
+    GI_color = GI_color < float3(1,1,1) ? GI_color : float3(1,1,1);
+    float GI_intensity = 0.299f * GI_color.r + 0.587f * GI_color.g + 0.114f * GI_color.b;
+    GI_intensity = GI_intensity < 1 ? GI_intensity : 1.0f;  
+    GI_color = (GI_color * GI_intensity * _GI_Intensity * smoothstep(1.0f ,0.0f, GI_intensity / 2.0f));
+    float3 ambient_color = max(half3(0.05f, 0.05f, 0.05f), max(ShadeSH9(half4(0.0, 0.0, 0.0, 1.0)),ShadeSH9(half4(0.0, -1.0, 0.0, 1.0)).rgb));
+    float3 light_color = max(ambient_color, _LightColor0.rgb);
     int material_ID = floor(lightmap * 8.0f);
     int material = material_region(material_ID);
     float4 outline_color[8] =
@@ -729,17 +786,16 @@ float4 ps_edge(vs_out i, bool vface : SV_IsFrontFace) : SV_Target
     if((1.0 /*_FaceMaterial*/)) out_color = float4(0,0,0,1);
     out_color.a = 1.0f;
     #if defined(can_shift)
-        float outline_mask = packed_channel_picker(sampler_LightMap, _HueMaskTexture, uv, (0.0 /*_OutlineMaskSource*/));
+        float outline_mask = packed_channel_picker(sampler_linear_repeat, _HueMaskTexture, uv, (0.0 /*_OutlineMaskSource*/));
         if(!(0.0 /*_UseHueMask*/)) outline_mask = 1.0f;
         if((1.0 /*_EnableOutlineHue*/)) out_color.xyz = hue_shift(out_color.xyz, material, (0.0 /*_OutlineHue*/), (0.0 /*_OutlineHue2*/), (0.0 /*_OutlineHue3*/), (0.0 /*_OutlineHue4*/), (0.0 /*_OutlineHue5*/), (0.0 /*_OutlineHue6*/), (0.0 /*_OutlineHue7*/), (0.0 /*_OutlineHue8*/), (0.0 /*_GlobalOutlineHue*/), (0.0 /*_AutomaticOutlineShift*/), (0.0 /*_ShiftOutlineSpeed*/), outline_mask);
     #endif
+    out_color.xyz = out_color.xyz * light_color + GI_color;
     #if defined(can_dissolve)
-        if((0.0 /*_DissoveONM*/) && ((0.0 /*_DissolveMode*/) == 2.0)) out_color.xyzw = dissolve_color(i.ws_pos, i.dis_pos, i.dis_uv, i.uv.xy, out_color);
-        if((0.0 /*_DissoveONM*/) && ((0.0 /*_DissolveMode*/) == 1.0))
+        if((0.0 /*_DissoveON*/))
         {
-            simple_dissolve(out_color.xyzw, i.uv.xy, i.uv.zw, i.dis_uv.xy, i.dis_pos, out_color.xyz, out_color.a);
-            clip(out_color.a - ((0.0 /*_DissolveClipRate*/) + 0.1f));
-        } 
+            dissolve_color(ws_pos, i.dis_pos, i.dis_uv, uv, out_color, out_color); 
+        }
     #endif
     if(i.v_col.w < 0.05f) clip(-1); // discard all pixels with the a vertex color alpha value of less than 0.05f
     if((0.0 /*_EnableAlphaCutoff*/)) clip(alpha - (0.0 /*_AlphaCutoff*/));
@@ -747,18 +803,17 @@ float4 ps_edge(vs_out i, bool vface : SV_IsFrontFace) : SV_Target
 }
 float4 ps_shadow(shadow_out i, bool vface : SV_ISFRONTFACE) : SV_TARGET
 {
+    float4 ws_pos = mul(unity_ObjectToWorld, i.ws_pos);
     float2 uv = (!vface) ? i.uv_a.zw : i.uv_a.xy;
     float testTresh = (0.0 /*_AlphaTestThreshold*/);
     if((0.0 /*_IsTransparent*/)) testTresh = 0.0f;
     float alpha = _MainTex.Sample(sampler_MainTex, uv).w;
     float4 out_color = (float4)0.0f;
     #if defined(can_dissolve)
-        if((0.0 /*_DissoveONM*/) && ((0.0 /*_DissolveMode*/) == 2.0))
-        {
-            dissolve_clip(i.ws_pos, i.dis_pos, i.dis_uv, uv);
-            out_color.xyz = dissolve_color(i.ws_pos, i.dis_pos, i.dis_uv, uv, out_color);
-            out_color.xyz = (float3)0.0f;
-        }
+    if((0.0 /*_DissoveON*/))
+    {
+        dissolve_clip(ws_pos, i.dis_pos, i.dis_uv, uv);
+    }        
     #endif
     if((0.0 /*_EnableAlphaCutoff*/)) clip(alpha - saturate(testTresh));
     return 0.0f;

@@ -387,8 +387,8 @@ Shader "HoyoToon/Star Rail/Character"
                 _CausSplit ("Caustic RGB Split--{condition_show:{type:AND,conditions:[{type:PROPERTY_BOOL,data:_CausToggle==1},{type:PROPERTY_BOOL,data:_EnableSplit==1}]}}", Range(0.0, 1.0)) = 0.0
             [HideInInspector] end_caustic ("", Float) = 0 
             //endex
-            //ifex _DissoveONM == 0
-            [HideInInspector] start_dissolve("Dissolve--{reference_property:_DissoveONM}", Float) = 0
+            //ifex _DissoveON == 0
+            [HideInInspector] start_dissolve("Dissolve--{reference_property:_DissoveON}", Float) = 0
                 [Toggle] _DissoveON ("Enable Dissolve", Float) = 0
                 _DissolveRate ("Dissolve Rate", Range(0, 1)) = 0
                 _DissolveMap ("Dissolve Map", 2D) = "white" { }
@@ -645,7 +645,7 @@ Shader "HoyoToon/Star Rail/Character"
         //ifex _EnableHueShift == 0
         #define can_shift
         //endex
-        //ifex _DissoveONM == 0
+        //ifex _DissoveON == 0
         #define can_dissolve
         //endex
         //ifex _DebugMode == 0

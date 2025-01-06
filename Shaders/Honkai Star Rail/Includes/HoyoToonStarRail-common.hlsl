@@ -196,177 +196,183 @@ float remap(float value, float old_min, float old_max, float new_min, float new_
 
 void dissolve_vertex(vs_in i, out float4 dis_pos, out float4 dis_uv)
 {
-    float2 dissolveUV = lerp(i.uv_0, i.uv_1, _DissolveUV);
+    #if defined(can_dissolve)
+        float2 dissolveUV = lerp(i.uv_0, i.uv_1, _DissolveUV);
 
-    dis_uv = float4(dissolveUV.xy * _DissolveST.xy + _DissolveST.zw, dissolveUV.xy * _DistortionST.xy + _DistortionST.zw);
+        dis_uv = float4(dissolveUV.xy * _DissolveST.xy + _DissolveST.zw, dissolveUV.xy * _DistortionST.xy + _DistortionST.zw);
 
-    dis_pos.x = dissolveUV.x;
+        dis_pos.x = dissolveUV.x;
 
-    float4 ws_pos = mul(unity_ObjectToWorld, i.vertex);
+        float4 ws_pos = mul(unity_ObjectToWorld, i.vertex);
 
-    float4 dissolvePos = lerp(i.vertex, ws_pos, _DissolvePosMaskWorldON);
+        float4 dissolvePos = lerp(i.vertex, ws_pos, _DissolvePosMaskWorldON);
 
-    float3 u_xlat1;
-    float4 u_xlat2;
-    float4 u_xlat3;
-    float3 u_xlat16_4;
-    float3 u_xlat6;
-    float u_xlat16_9;
-    float u_xlat16;
-    bool u_xlatb16;
+        float3 u_xlat1;
+        float4 u_xlat2;
+        float4 u_xlat3;
+        float3 u_xlat16_4;
+        float3 u_xlat6;
+        float u_xlat16_9;
+        float u_xlat16;
+        bool u_xlatb16;
 
-    u_xlat1.xyz = dissolvePos;
+        u_xlat1.xyz = dissolvePos;
 
-    u_xlat2.xyz = (-u_xlat1.xyz) + _ES_EffCustomLightPosition.xyz;
-    u_xlat1.xyz = (float3)(_DissolvePosMaskGlobalOn) * u_xlat2.xyz + u_xlat1.xyz;
-    u_xlat1.xyz = u_xlat1.xyz + (-_DissolvePosMaskRootOffset.xyz);
-    u_xlat2.xyz = _ES_EffCustomLightPosition.xyz + (-unity_ObjectToWorld[3].xyz);
-    u_xlat3.xyz = (float3)(_DissolvePosMaskWorldON) * (-unity_ObjectToWorld[3].xyz) + _DissolvePosMaskPos.xyz;
-    u_xlat2.xyz = u_xlat2.xyz + (-u_xlat3.xyz);
-    u_xlat2.xyz = (float3)(_DissolvePosMaskGlobalOn) * u_xlat2.xyz + u_xlat3.xyz;
-    u_xlat16_4.x = dot(u_xlat2.xyz, u_xlat2.xyz);
-    u_xlat16_4.x = rsqrt(u_xlat16_4.x);
-    u_xlat16_4.xyz = u_xlat2.xyz * u_xlat16_4.xxx;
-    u_xlat16 = dot(abs(u_xlat2.xyz), float3(1.0, 1.0, 1.0));
-    u_xlatb16 = u_xlat16>=0.00100000005;
-    u_xlat1.x = dot(u_xlat16_4.xyz, u_xlat1.xyz);
-    u_xlat16_4.x = max(_DissolvePosMaskPos.w, 0.00999999978);
-    u_xlat16_9 = abs(u_xlat1.x) + u_xlat16_4.x;
-    u_xlat16_4.x = u_xlat16_4.x + u_xlat16_4.x;
-    u_xlat16_4.x = u_xlat16_9 / u_xlat16_4.x;
-    u_xlat16_9 = u_xlat16_4.x * -2.0 + 1.0;
-    u_xlat16_4.x = _DissolvePosMaskFilpOn * u_xlat16_9 + u_xlat16_4.x;
-    u_xlat16_4.x = u_xlat16_4.x + (-_DissolvePosMaskOn);
-    u_xlat16_4.x = u_xlat16_4.x + 1.0;
-    u_xlat16_4.x = clamp(u_xlat16_4.x, 0.0, 1.0);
-    dis_pos.y = (u_xlatb16) ? u_xlat16_4.x : 1.0;
-    dis_pos.zw = float2(0.0, 0.0);
+        u_xlat2.xyz = (-u_xlat1.xyz) + _ES_EffCustomLightPosition.xyz;
+        u_xlat1.xyz = (float3)(_DissolvePosMaskGlobalOn) * u_xlat2.xyz + u_xlat1.xyz;
+        u_xlat1.xyz = u_xlat1.xyz + (-_DissolvePosMaskRootOffset.xyz);
+        u_xlat2.xyz = _ES_EffCustomLightPosition.xyz + (-unity_ObjectToWorld[3].xyz);
+        u_xlat3.xyz = (float3)(_DissolvePosMaskWorldON) * (-unity_ObjectToWorld[3].xyz) + _DissolvePosMaskPos.xyz;
+        u_xlat2.xyz = u_xlat2.xyz + (-u_xlat3.xyz);
+        u_xlat2.xyz = (float3)(_DissolvePosMaskGlobalOn) * u_xlat2.xyz + u_xlat3.xyz;
+        u_xlat16_4.x = dot(u_xlat2.xyz, u_xlat2.xyz);
+        u_xlat16_4.x = rsqrt(u_xlat16_4.x);
+        u_xlat16_4.xyz = u_xlat2.xyz * u_xlat16_4.xxx;
+        u_xlat16 = dot(abs(u_xlat2.xyz), float3(1.0, 1.0, 1.0));
+        u_xlatb16 = u_xlat16>=0.00100000005;
+        u_xlat1.x = dot(u_xlat16_4.xyz, u_xlat1.xyz);
+        u_xlat16_4.x = max(_DissolvePosMaskPos.w, 0.00999999978);
+        u_xlat16_9 = abs(u_xlat1.x) + u_xlat16_4.x;
+        u_xlat16_4.x = u_xlat16_4.x + u_xlat16_4.x;
+        u_xlat16_4.x = u_xlat16_9 / u_xlat16_4.x;
+        u_xlat16_9 = u_xlat16_4.x * -2.0 + 1.0;
+        u_xlat16_4.x = _DissolvePosMaskFilpOn * u_xlat16_9 + u_xlat16_4.x;
+        u_xlat16_4.x = u_xlat16_4.x + (-_DissolvePosMaskOn);
+        u_xlat16_4.x = u_xlat16_4.x + 1.0;
+        u_xlat16_4.x = clamp(u_xlat16_4.x, 0.0, 1.0);
+        dis_pos.y = (u_xlatb16) ? u_xlat16_4.x : 1.0;
+        dis_pos.zw = float2(0.0, 0.0);
+    #endif
 }
 
 void dissolve_clip(in float4 ws_pos, in float4 dis_pos, in float4 dis_uv, in float2 uv)
 {
-    float rate = _DissolveRate;
-    if(_InvertRate) rate = 1.0 - rate;
-    if(_DissolveUseDirection)
-    {
-        float3 dissolvePos = ws_pos.xyz + (float3)1.99999999e-06;
-        dissolvePos.xyz = dissolvePos.xyz + (-_DissolveCenter.xyz);
-        dissolvePos = dot(dissolvePos.xyz, _DissolveDiretcionXYZ.xyz);
+    #if defined(can_dissolve)
+        float rate = _DissolveRate;
+        if(_InvertRate) rate = 1.0 - rate;
+        if(_DissolveUseDirection)
+        {
+            float3 dissolvePos = ws_pos.xyz + (float3)1.99999999e-06;
+            dissolvePos.xyz = dissolvePos.xyz + (-_DissolveCenter.xyz);
+            dissolvePos = dot(dissolvePos.xyz, _DissolveDiretcionXYZ.xyz);
 
-        float test = 0.0f < dissolvePos ? 2 : int(0);
-        if(test == 0) discard;
-        // clip(dissolvePos);
-    }
-    else
-    {
-        float2 dissolveUV = dis_uv.zw + (float2)3.00000011e-06;
-        dissolveUV = _DissolveUVSpeed.zw * _Time.yy + dissolveUV.xy;
+            float test = 0.0f < dissolvePos ? 2 : int(0);
+            if(test == 0) discard;
+            // clip(dissolvePos);
+        }
+        else
+        {
+            float2 dissolveUV = dis_uv.zw + (float2)3.00000011e-06;
+            dissolveUV = _DissolveUVSpeed.zw * _Time.yy + dissolveUV.xy;
 
-        float2 dissolveMap = _DissolveMap.Sample(sampler_linear_repeat, dissolveUV);
-        dissolveMap.xy = -(dissolveMap + - 0.5f) * (float2)(_DissolveDistortionIntensity) + dis_uv.xy;
+            float2 dissolveMap = _DissolveMap.Sample(sampler_linear_repeat, dissolveUV);
+            dissolveMap.xy = -(dissolveMap + - 0.5f) * (float2)(_DissolveDistortionIntensity) + dis_uv.xy;
 
-        dissolveUV = _DissolveUVSpeed.xy * _Time.yy + dissolveMap.xy;
-        dissolveMap = _DissolveMap.Sample(sampler_linear_repeat, dissolveUV).zz + _DissolveMapAdd;
+            dissolveUV = _DissolveUVSpeed.xy * _Time.yy + dissolveMap.xy;
+            dissolveMap = _DissolveMap.Sample(sampler_linear_repeat, dissolveUV).zz + _DissolveMapAdd;
 
-        float4 dissolveMask = _DissolveMask.Sample(sampler_linear_repeat, uv);
+            float4 dissolveMask = _DissolveMask.Sample(sampler_linear_repeat, uv);
 
-        dissolveMask.x = dot(dissolveMask, _DissolveComponent);
+            dissolveMask.x = dot(dissolveMask, _DissolveComponent);
 
-        float dissolve = (-dis_pos.x) + _DissoveDirecMask;
-        dissolve.x = min(abs(dissolve.x), 1.0);
+            float dissolve = (-dis_pos.x) + _DissoveDirecMask;
+            dissolve.x = min(abs(dissolve.x), 1.0);
 
-        dissolve.x = dissolve.x * dissolveMap;
-        dissolve.x = dissolveMask.x * dissolve.x;
-        dissolve.x = dissolve.x * dis_pos.y;
-        dissolve.x = dissolve.x * 1.00999999 + -0.00999999978;
-        dissolve.x = dissolve.x + (-rate);
-        dissolve.x = dissolve.x + 1.0;
-        dissolve.x = floor(dissolve.x);
-        dissolve.x = max(dissolve.x, 0.0);
+            dissolve.x = dissolve.x * dissolveMap;
+            dissolve.x = dissolveMask.x * dissolve.x;
+            dissolve.x = dissolve.x * dis_pos.y;
+            dissolve.x = dissolve.x * 1.00999999 + -0.00999999978;
+            dissolve.x = dissolve.x + (-rate);
+            dissolve.x = dissolve.x + 1.0;
+            dissolve.x = floor(dissolve.x);
+            dissolve.x = max(dissolve.x, 0.0);
 
-        if((int)dissolve.x == 0) discard;
-    }
+            if((int)dissolve.x == 0) discard;
+        }
+    #endif
 }
 
 void dissolve_color(float4 ws_pos, float4 dis_pos, float4 dis_uv, float2 uv,in float4 diffuse, inout float4 color)
 {
-    float rate = _DissolveRate;
-    if(_InvertRate) rate = 1.0 - rate;
-    if(_DissolveUseDirection)
-    {
-        float3 u_xlat2  = ws_pos.xyz + (-_DissolveCenter.xyz);
-        float u_xlat0 = dot(u_xlat2.xyz, _DissolveDiretcionXYZ.xyz);
-        int test = 0.0<u_xlat0 ? (int)2 : (int)0;
-        if((test)==0){discard;}
-    }
-    else
-    {
-        float dissolveDirMask =  (-dis_pos.x) + _DissoveDirecMask;
-        dissolveDirMask = min(abs(dissolveDirMask), 1.0);
+    #if defined(can_dissolve)
+        float rate = _DissolveRate;
+        if(_InvertRate) rate = 1.0 - rate;
+        if(_DissolveUseDirection)
+        {
+            float3 u_xlat2  = ws_pos.xyz + (-_DissolveCenter.xyz);
+            float u_xlat0 = dot(u_xlat2.xyz, _DissolveDiretcionXYZ.xyz);
+            int test = 0.0<u_xlat0 ? (int)2 : (int)0;
+            if((test)==0){discard;}
+        }
+        else
+        {
+            float dissolveDirMask =  (-dis_pos.x) + _DissoveDirecMask;
+            dissolveDirMask = min(abs(dissolveDirMask), 1.0);
 
-        float2 dissolveUV = _DissolveUVSpeed.zw * _Time.yy + dis_uv.zw;
-        float2 dissolveMap = _DissolveMap.Sample(sampler_linear_repeat, dissolveUV).xy;
-        dissolveMap = -(dissolveMap + -0.5f) * _DissolveDistortionIntensity.xx + dis_uv.xy;
-        dissolveMap = _DissolveUVSpeed.xy * _Time.yy + dissolveMap;
+            float2 dissolveUV = _DissolveUVSpeed.zw * _Time.yy + dis_uv.zw;
+            float2 dissolveMap = _DissolveMap.Sample(sampler_linear_repeat, dissolveUV).xy;
+            dissolveMap = -(dissolveMap + -0.5f) * _DissolveDistortionIntensity.xx + dis_uv.xy;
+            dissolveMap = _DissolveUVSpeed.xy * _Time.yy + dissolveMap;
 
-        dissolveMap.x = _DissolveMap.Sample(sampler_linear_repeat, dissolveMap).z + _DissolveMapAdd;
-        float4 dissolveMask = _DissolveMask.Sample(sampler_linear_repeat, uv);
-        dissolveMask.x = dot(dissolveMask, _DissolveComponent);
-        dissolveDirMask = dissolveDirMask * dissolveMap;
-        dissolveDirMask = dissolveMask.x * dissolveDirMask;
-        dissolveDirMask = dissolveDirMask * dis_pos.y;
-        dissolveDirMask = dissolveDirMask * 1.00999999 + -0.00999999978;
-        // float dissolveRate = dissolveDirMask + (-_DissolveRate);
-        // dissolveRate = dissolveRate + 1.0;
-        // dissolveRate = floor(dissolveDirMask);
-        // dissolveRate = max(dissolveRate, 0.0);
-        // if((int)dissolveRate == 0) discard;
-        // the above is redundent code since its essentially handled in the dissolve_vertex function above.
-        
-        float4 u_xlat16_8;
-        float4 u_xlat16_11;
-        float4 u_xlat16_12;
-        float4 u_xlat16_18;
-        float4 u_xlat2;
-        float4 u_xlat4;
-        float4 u_xlat7;
-        float4 u_xlat16_3;
-        float4 u_xlat16_5;
-        float4 u_xlat16_23;
-        float4 u_xlat16_38;
-        float4 u_xlat16_0;
-        float4 u_xlat16_1;
-        float4 u_xlat16_2;
-        float4 u_xlat16_4;
-        float4 u_xlat16_6;
+            dissolveMap.x = _DissolveMap.Sample(sampler_linear_repeat, dissolveMap).z + _DissolveMapAdd;
+            float4 dissolveMask = _DissolveMask.Sample(sampler_linear_repeat, uv);
+            dissolveMask.x = dot(dissolveMask, _DissolveComponent);
+            dissolveDirMask = dissolveDirMask * dissolveMap;
+            dissolveDirMask = dissolveMask.x * dissolveDirMask;
+            dissolveDirMask = dissolveDirMask * dis_pos.y;
+            dissolveDirMask = dissolveDirMask * 1.00999999 + -0.00999999978;
+            // float dissolveRate = dissolveDirMask + (-_DissolveRate);
+            // dissolveRate = dissolveRate + 1.0;
+            // dissolveRate = floor(dissolveDirMask);
+            // dissolveRate = max(dissolveRate, 0.0);
+            // if((int)dissolveRate == 0) discard;
+            // the above is redundent code since its essentially handled in the dissolve_vertex function above.
+            
+            float4 u_xlat16_8;
+            float4 u_xlat16_11;
+            float4 u_xlat16_12;
+            float4 u_xlat16_18;
+            float4 u_xlat2;
+            float4 u_xlat4;
+            float4 u_xlat7;
+            float4 u_xlat16_3;
+            float4 u_xlat16_5;
+            float4 u_xlat16_23;
+            float4 u_xlat16_38;
+            float4 u_xlat16_0;
+            float4 u_xlat16_1;
+            float4 u_xlat16_2;
+            float4 u_xlat16_4;
+            float4 u_xlat16_6;
 
 
-        u_xlat16_8.x = rate + _DissolveOutlineSize1;
-        u_xlat16_8.y = u_xlat16_8.x + (-_DissolveOutlineSize2);
-        u_xlat16_8.xy = dissolveDirMask.xx + (-u_xlat16_8.xy);
-        u_xlat16_38.xy = _DissolveOutlineSmoothStep.xy + 0.00100000005f;
-        u_xlat16_38.xy = float2(1.0, 1.0) / u_xlat16_38.xy;
-        u_xlat16_8.xy = u_xlat16_38.xy * u_xlat16_8.xy;
-        u_xlat16_8.xy = clamp(u_xlat16_8.xy, 0.0, 1.0);
-        u_xlat16_11.xyz = diffuse.xyz * dissolveMap.x + _DissolveOutlineOffset;
-        u_xlat16_12.xyz = u_xlat16_11.xyz * _DissolveOutlineColor1.xyz;
-        u_xlat16_11.xyz = u_xlat16_11.xyz * _DissolveOutlineColor2.xyz + (-u_xlat16_12.xyz);
-        u_xlat16_23.xyz = u_xlat16_8.yyy * u_xlat16_11.xyz + u_xlat16_12.xyz;
-        u_xlat16_3.x = u_xlat16_8.x + 1.0;
-        u_xlat16_3.x = u_xlat16_3.x + (-_DissolveOutlineColor1.w);
-        u_xlat16_3.x = clamp(u_xlat16_3.x, 0.0, 1.0);
-        u_xlat16_18.xyz = color.xyz * 1.0f + (-u_xlat16_23.xyz);
-        u_xlat16_18.xyz = u_xlat16_3.xxx * u_xlat16_18.xyz + u_xlat16_23.xyz;
-        u_xlat2.xyz = u_xlat16_18.xyz * 278.508514f + 10.7771997f;
-        u_xlat2.xyz = u_xlat2.xyz * u_xlat16_18.xyz;
-        u_xlat4.xyz = u_xlat16_18.xyz * 298.604492f + 88.7121964f;
-        u_xlat4.xyz = u_xlat16_18.xyz * u_xlat4.xyz + 80.6889038f;
-        u_xlat2.xyz = u_xlat2.xyz / u_xlat4.xyz;
-        u_xlat4.xyz = (-u_xlat2.xyz) + u_xlat16_18.xyz;
-        u_xlat7.xyz = u_xlat16_3.xxx * u_xlat4.xyz + u_xlat2.xyz;
-        color.xyz = u_xlat7.xyz;
+            u_xlat16_8.x = rate + _DissolveOutlineSize1;
+            u_xlat16_8.y = u_xlat16_8.x + (-_DissolveOutlineSize2);
+            u_xlat16_8.xy = dissolveDirMask.xx + (-u_xlat16_8.xy);
+            u_xlat16_38.xy = _DissolveOutlineSmoothStep.xy + 0.00100000005f;
+            u_xlat16_38.xy = float2(1.0, 1.0) / u_xlat16_38.xy;
+            u_xlat16_8.xy = u_xlat16_38.xy * u_xlat16_8.xy;
+            u_xlat16_8.xy = clamp(u_xlat16_8.xy, 0.0, 1.0);
+            u_xlat16_11.xyz = diffuse.xyz * dissolveMap.x + _DissolveOutlineOffset;
+            u_xlat16_12.xyz = u_xlat16_11.xyz * _DissolveOutlineColor1.xyz;
+            u_xlat16_11.xyz = u_xlat16_11.xyz * _DissolveOutlineColor2.xyz + (-u_xlat16_12.xyz);
+            u_xlat16_23.xyz = u_xlat16_8.yyy * u_xlat16_11.xyz + u_xlat16_12.xyz;
+            u_xlat16_3.x = u_xlat16_8.x + 1.0;
+            u_xlat16_3.x = u_xlat16_3.x + (-_DissolveOutlineColor1.w);
+            u_xlat16_3.x = clamp(u_xlat16_3.x, 0.0, 1.0);
+            u_xlat16_18.xyz = color.xyz * 1.0f + (-u_xlat16_23.xyz);
+            u_xlat16_18.xyz = u_xlat16_3.xxx * u_xlat16_18.xyz + u_xlat16_23.xyz;
+            u_xlat2.xyz = u_xlat16_18.xyz * 278.508514f + 10.7771997f;
+            u_xlat2.xyz = u_xlat2.xyz * u_xlat16_18.xyz;
+            u_xlat4.xyz = u_xlat16_18.xyz * 298.604492f + 88.7121964f;
+            u_xlat4.xyz = u_xlat16_18.xyz * u_xlat4.xyz + 80.6889038f;
+            u_xlat2.xyz = u_xlat2.xyz / u_xlat4.xyz;
+            u_xlat4.xyz = (-u_xlat2.xyz) + u_xlat16_18.xyz;
+            u_xlat7.xyz = u_xlat16_3.xxx * u_xlat4.xyz + u_xlat2.xyz;
+            color.xyz = u_xlat7.xyz;
 
-    }
+        }
+    #endif
 }
 
 void heightlightlerp(float4 pos, inout float4 color)

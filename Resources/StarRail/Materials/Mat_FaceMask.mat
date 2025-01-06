@@ -22,52 +22,18 @@ Material:
     OriginalShader: HoyoToon/Star Rail/Character
     OriginalShaderGUID: b196fee0fbabd494c81494f39a8192f4
     RenderType: Opaque
+    _stripped_tex__DissolveMap: 8738fd26d686f21469a94a8f851eb987
+    _stripped_tex__DissolveMask: 553472a95160e14498d4ac7897bcfae2
   disabledShaderPasses: []
   m_LockedProperties: 
   m_SavedProperties:
     serializedVersion: 3
     m_TexEnvs:
-    - _CausTexture:
-        m_Texture: {fileID: 0}
-        m_Scale: {x: 1, y: 1}
-        m_Offset: {x: 0, y: 0}
-    - _DiffuseCoolRampMultiTex:
-        m_Texture: {fileID: 0}
-        m_Scale: {x: 1, y: 1}
-        m_Offset: {x: 0, y: 0}
-    - _DiffuseRampMultiTex:
-        m_Texture: {fileID: 0}
-        m_Scale: {x: 1, y: 1}
-        m_Offset: {x: 0, y: 0}
-    - _DissolveAnimTex:
-        m_Texture: {fileID: 0}
-        m_Scale: {x: 1, y: 1}
-        m_Offset: {x: 0, y: 0}
-    - _DissolveGradientMask:
-        m_Texture: {fileID: 0}
-        m_Scale: {x: 1, y: 1}
-        m_Offset: {x: 0, y: 0}
-    - _DissolveMap:
-        m_Texture: {fileID: 2800000, guid: 8738fd26d686f21469a94a8f851eb987, type: 3}
-        m_Scale: {x: 1, y: 1}
-        m_Offset: {x: 0, y: 0}
-    - _DissolveMask:
-        m_Texture: {fileID: 2800000, guid: 553472a95160e14498d4ac7897bcfae2, type: 3}
-        m_Scale: {x: 1, y: 1}
-        m_Offset: {x: 0, y: 0}
-    - _EmissionTex:
-        m_Texture: {fileID: 0}
-        m_Scale: {x: 1, y: 1}
-        m_Offset: {x: 0, y: 0}
     - _FaceExpression:
         m_Texture: {fileID: 0}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _FaceMap:
-        m_Texture: {fileID: 0}
-        m_Scale: {x: 1, y: 1}
-        m_Offset: {x: 0, y: 0}
-    - _HueMaskTexture:
         m_Texture: {fileID: 0}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
@@ -83,16 +49,26 @@ Material:
         m_Texture: {fileID: 0}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
-    - _SecondaryDiff:
+    - _SkyMask:
         m_Texture: {fileID: 0}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
-    - _StockRangeTex:
+    - _SkyStarMaskTex:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _SkyStarTex:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _SkyTex:
         m_Texture: {fileID: 0}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     m_Ints: []
     m_Floats:
+    - ShaderBG: 0
+    - ShaderLogo: 0
     - _AlphaCutoff: 0
     - _AlphaTestThreshold: 0
     - _AutomaticColorShift: 0
@@ -107,6 +83,7 @@ Material:
     - _CausSplit: 0
     - _CausToggle: 0
     - _CausUV: 0
+    - _CharaWorldSpaceOffset: 0
     - _ColorHue: 0
     - _ColorHue2: 0
     - _ColorHue3: 0
@@ -138,25 +115,44 @@ Material:
     - _DissolveAnimSpeed: 1
     - _DissolveClip: 0
     - _DissolveClipRate: 0
+    - _DissolveDistortionIntensity: 0.01
     - _DissolveDistortionIntensityM: 0.5
     - _DissolveGradientOffset: 0
+    - _DissolveMapAdd: 0
     - _DissolveMapAddM: 0.83
     - _DissolveMode: 0
+    - _DissolveOutlineOffset: 0
     - _DissolveOutlineOffsetM: 1
+    - _DissolveOutlineSize1: 0.05
     - _DissolveOutlineSize1M: 0.02
+    - _DissolveOutlineSize2: 0
     - _DissolveOutlineSize2M: -0.02
+    - _DissolvePosMaskFilpOn: 0
     - _DissolvePosMaskFilpOnM: 0
     - _DissolvePosMaskGlobalOnM: 1
+    - _DissolvePosMaskOn: 0
     - _DissolvePosMaskOnM: 1
+    - _DissolvePosMaskWorldON: 0
     - _DissolvePosMaskWorldONM: 1
+    - _DissolveRate: 0
     - _DissolveRateM: 0
     - _DissolveSimpleRate: 0
+    - _DissolveUV: 0
     - _DissolveUVChannel: 0
     - _DissolveUVM: 0
+    - _DissolveUseDirection: 0
     - _DissolveUsePosition: 0
+    - _DissoveDirecMask: 2
     - _DissoveDirecMaskM: -0.36
+    - _DissoveON: 0
     - _DissoveONM: 0
     - _DstBlend: 0
+    - _ES_HeightLerpBottom: 0
+    - _ES_HeightLerpTop: 1
+    - _ES_LEVEL_ADJUST_ON: 0
+    - _ES_LevelHighLight: 1
+    - _ES_LevelMid: 0.55
+    - _ES_LevelShadow: 0
     - _ES_Rimintensity: 0.1
     - _ES_SPIntensity: 0.5
     - _EmissionHue: 0
@@ -193,6 +189,7 @@ Material:
     - _ExSpecularIntensity: 0
     - _EyeShadowMat: 0
     - _FaceMaterial: 1
+    - _FaceSoftness: 0.0001
     - _FilterLight: 1
     - _FixLipOutline: 0
     - _GlobalColorHue: 0
@@ -207,6 +204,7 @@ Material:
     - _IsTransparent: 0
     - _MultiLight: 1
     - _NoseLinePower: 1
+    - _OSScale: 1
     - _OutlineFixFront: 0.05
     - _OutlineFixRange1: 0.1
     - _OutlineFixRange2: 0.1
@@ -271,6 +269,14 @@ Material:
     - _ShiftOutlineSpeed: 0
     - _ShiftRimSpeed: 0
     - _SimpleDissolveClip: 0
+    - _SkyFresnelBaise: 0
+    - _SkyFresnelScale: 0
+    - _SkyFresnelSmooth: 0
+    - _SkyRange: 0
+    - _SkyStarDepthScale: 1
+    - _SkyStarMaskTexScale: 1
+    - _SkyStarMaskTexSpeed: 0
+    - _SkyStarTexScale: 1
     - _SpecularIntensity0: 1
     - _SpecularIntensity1: 1
     - _SpecularIntensity2: 1
@@ -296,6 +302,11 @@ Material:
     - _SpecularShininess6: 10
     - _SpecularShininess7: 10
     - _SrcBlend: 1
+    - _StarAffectedByLight: 1
+    - _StarDensity: 0.5
+    - _StarMode: 0
+    - _StarrySky: 0
+    - _StarsAreDiffuse: 0
     - _StencilCompA: 5
     - _StencilCompB: 5
     - _StencilPassA: 0
@@ -308,6 +319,7 @@ Material:
     - _Stockpower1: 1
     - _UseDifAlphaStencil: 2
     - _UseHairSideFade: 0
+    - _UseHeightLerp: 0
     - _UseHueMask: 0
     - _UseMaterialValuesLUT: 0
     - _UseSecondaryTex: 0
@@ -315,6 +327,51 @@ Material:
     - _UseWorldPosDissolve: 0
     - _backfdceuv2: 1
     - _testA: 0.5
+    - end_caustic: 0
+    - end_colorhue: 0
+    - end_debugOptions: 0
+    - end_directionmask: 0
+    - end_dissolve: 0
+    - end_dissolvemask: 0
+    - end_dissolveoutline: 0
+    - end_disspos: 0
+    - end_faceexpression: 0
+    - end_faceshading: 0
+    - end_facingdirection: 0
+    - end_glowhue: 0
+    - end_heightcolors: 0
+    - end_heightfog: 0
+    - end_hueshift: 0
+    - end_lightandshadow: 0
+    - end_lighting: 0
+    - end_lightingrim: 0
+    - end_lightingrimcolor: 0
+    - end_lightingrimdark: 0
+    - end_lightingrimsoftness: 0
+    - end_lightingrimtype: 0
+    - end_main: 0
+    - end_mainalpha: 0
+    - end_maincolor: 0
+    - end_outlinecolor: 0
+    - end_outlinehue: 0
+    - end_outlinelip: 0
+    - end_outlines: 0
+    - end_renderingOptions: 0
+    - end_rimhue: 0
+    - end_secondarymain: 0
+    - end_selfshadow: 0
+    - end_shadowcontrol: 0
+    - end_specialeffects: 0
+    - end_specialeffectsemission: 0
+    - end_specular: 0
+    - end_specularcolor: 0
+    - end_specularintensity: 0
+    - end_specularroughness: 0
+    - end_specularshininess: 0
+    - end_starrysky: 0
+    - end_stencilalpha: 0
+    - end_stencilfade: 0
+    - end_stockings: 0
     - footer_discord: 0
     - footer_github: 0
     - m_end_caustic: 0
@@ -400,6 +457,51 @@ Material:
     - shader_master_bg: 0
     - shader_master_label: 0
     - shader_master_logo: 0
+    - start_caustic: 0
+    - start_colorhue: 0
+    - start_debugOptions: 0
+    - start_directionmask: 0
+    - start_dissolve: 0
+    - start_dissolvemask: 0
+    - start_dissolveoutline: 0
+    - start_disspos: 0
+    - start_faceexpression: 0
+    - start_faceshading: 0
+    - start_facingdirection: 0
+    - start_glowhue: 0
+    - start_heightcolors: 0
+    - start_heightfog: 0
+    - start_hueshift: 0
+    - start_lightandshadow: 0
+    - start_lighting: 0
+    - start_lightingrim: 0
+    - start_lightingrimcolor: 0
+    - start_lightingrimdark: 0
+    - start_lightingrimsoftness: 0
+    - start_lightingrimtype: 0
+    - start_main: 0
+    - start_mainalpha: 0
+    - start_maincolor: 0
+    - start_outlinecolor: 0
+    - start_outlinehue: 0
+    - start_outlinelip: 0
+    - start_outlines: 0
+    - start_renderingOptions: 0
+    - start_rimhue: 0
+    - start_secondarymain: 0
+    - start_selfshadow: 0
+    - start_shadowcontrol: 0
+    - start_specialeffects: 0
+    - start_specialeffectsemission: 0
+    - start_specular: 0
+    - start_specularcolor: 0
+    - start_specularintensity: 0
+    - start_specularroughness: 0
+    - start_specularshininess: 0
+    - start_starrysky: 0
+    - start_stencilalpha: 0
+    - start_stencilfade: 0
+    - start_stockings: 0
     - variant_selector: 1
     m_Colors:
     - _BackColor: {r: 1, g: 1, b: 1, a: 1}
@@ -417,18 +519,36 @@ Material:
     - _Color7: {r: 1, g: 1, b: 1, a: 1}
     - _DissolveAnimDirection: {r: 0, g: 0, b: 0, a: 0}
     - _DissolveAnimSO: {r: 1, g: 1, b: 0, a: 0}
+    - _DissolveComponent: {r: 1, g: 0, b: 0, a: 0}
     - _DissolveComponentM: {r: 1, g: 1, b: 0, a: 0}
+    - _DissolveDiretcionXYZ: {r: 0, g: 0, b: 0, a: 0}
     - _DissolveFadeDirection: {r: 0, g: 0, b: 0, a: 0}
+    - _DissolveOutlineColor1: {r: 1, g: 1, b: 1, a: 1}
     - _DissolveOutlineColor1M: {r: 0.4663585, g: 3.1038074, b: 4.2416425, a: 1}
+    - _DissolveOutlineColor2: {r: 0, g: 0, b: 0, a: 0}
     - _DissolveOutlineColor2M: {r: 0, g: 0, b: 0, a: 0}
+    - _DissolveOutlineSmoothStep: {r: 0, g: 0, b: 0, a: 0}
     - _DissolveOutlineSmoothStepM: {r: 0, g: 0, b: 0, a: 0}
+    - _DissolvePosMaskPos: {r: 1, g: 0, b: 0, a: 1}
     - _DissolvePosMaskPosM: {r: 1, g: 0, b: 0, a: 1}
+    - _DissolvePosMaskRootOffset: {r: 0, g: 0, b: 0, a: 0}
     - _DissolvePosMaskRootOffsetM: {r: 0, g: 1, b: 0, a: 0}
     - _DissolveSMT: {r: 2, g: 2, b: 0, a: 0}
+    - _DissolveST: {r: 1, g: 1, b: 0, a: 0}
+    - _DissolveUVSpeed: {r: 0, g: 0, b: 0, a: 0}
     - _DissolveUVSpeedM: {r: 0, g: 0.1, b: 0, a: -0.1}
     - _DissovleFadeSmoothstep: {r: 0, g: 1, b: 0, a: 0}
     - _DissovlePosFadeSmoothstep: {r: 0, g: 1, b: 0, a: 0}
+    - _DistortionST: {r: 1, g: 1, b: 0, a: 0}
     - _DistortionSTM: {r: 2, g: 2, b: 0, a: 0}
+    - _ES_EffCustomLightPosition: {r: 1, g: 0, b: 0, a: 1}
+    - _ES_HeightLerpBottomColor: {r: 1, g: 1, b: 1, a: 1}
+    - _ES_HeightLerpMiddleColor: {r: 1, g: 1, b: 1, a: 1}
+    - _ES_HeightLerpTopColor: {r: 1, g: 1, b: 1, a: 1}
+    - _ES_LevelHighLightColor: {r: 1, g: 1, b: 1, a: 0.5}
+    - _ES_LevelShadowColor: {r: 1, g: 1, b: 1, a: 0.5}
+    - _ES_LevelSkinLightColor: {r: 1, g: 1, b: 1, a: 0.5}
+    - _ES_LevelSkinShadowColor: {r: 1, g: 1, b: 1, a: 0.5}
     - _ES_RimLightOffset: {r: 0, g: 0, b: 0, a: 0}
     - _ES_SPColor: {r: 1, g: 1, b: 1, a: 1}
     - _EmissionTintColor: {r: 1, g: 1, b: 1, a: 1}
@@ -455,6 +575,9 @@ Material:
     - _RimColor7: {r: 1, g: 1, b: 1, a: 1}
     - _RimOffset: {r: 0, g: 0, b: 0, a: 0}
     - _ShadowColor: {r: 0.5, g: 0.5, b: 0.5, a: 1}
+    - _SkyFresnelColor: {r: 0, g: 0, b: 0, a: 1}
+    - _SkyStarColor: {r: 1, g: 1, b: 1, a: 1}
+    - _SkyStarSpeed: {r: 0, g: 0, b: 0, a: 0}
     - _SpecularColor0: {r: 1, g: 1, b: 1, a: 1}
     - _SpecularColor1: {r: 1, g: 1, b: 1, a: 1}
     - _SpecularColor2: {r: 1, g: 1, b: 1, a: 1}
