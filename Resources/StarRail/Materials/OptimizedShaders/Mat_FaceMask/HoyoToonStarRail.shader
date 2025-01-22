@@ -60,6 +60,11 @@ Shader "Hidden/Locked/HoyoToon/Star Rail/Character/68ab7b50744734147a7fa4dc25699
                 _headForwardVector ("Forward Vector | XYZ", Vector) = (0, 0, 1, 0)
                 _headRightVector ("Right Vector | XYZ ", Vector) = (-1, 0, 0, 0)
             [HideInInspector] end_facingdirection ("", Float) = 0
+            [HideInInspector] start_showids ("Show IDS", Float) = 0
+                [IntRange] _ShowPartID ("Show Part ID", Range(-256,256)) = 0
+                [Toggle]_HideCharaParts ("Hide Character Parts", Float) = 0
+                [Toggle]_HideNPCParts ("Hide NPC Parts", Float) = 0
+            [HideInInspector] end_showids ("", Float) = 0
         [HideInInspector] end_main ("", Float) = 0
         [HideInInspector] start_faceshading("Face--{condition_show:{type:PROPERTY_BOOL,data:_FaceMaterial==1.0}}", Float) = 0
             [SmallTexture] _FaceMap ("Face Map Texture", 2D) = "white" {}

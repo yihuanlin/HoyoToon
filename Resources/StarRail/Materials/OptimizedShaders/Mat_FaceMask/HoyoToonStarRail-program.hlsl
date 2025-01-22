@@ -34,6 +34,7 @@ vs_out vs_base(vs_in v)
             o.pos = UnityObjectToClipPos(v.vertex);
         }
     #endif
+    if(hide_parts(v.v_col) && !(1.0 /*_FaceMaterial*/) && ((0 /*_ShowPartID*/) != 0)) o.pos = float4(-99.0, -99.0, -99.0, 1.0);
     TRANSFER_SHADOW(o)
     return o;
 }
@@ -127,6 +128,7 @@ vs_out vs_edge(vs_in v)
     {
         dissolve_vertex(v, o.dis_pos, o.dis_uv);
     }
+    if(hide_parts(v.v_col) && !(1.0 /*_FaceMaterial*/) && ((0 /*_ShowPartID*/) != 0)) o.pos = float4(-99.0, -99.0, -99.0, 1.0);
     return o;
 }
 shadow_out vs_shadow(shadow_in v)
@@ -144,6 +146,8 @@ shadow_out vs_shadow(shadow_in v)
     {
         dissolve_vertex(v, o.dis_pos, o.dis_uv);
     }
+    if(hide_parts(v.v_col) && !(1.0 /*_FaceMaterial*/) && ((0 /*_ShowPartID*/) != 0)) o.pos = float4(-99.0, -99.0, -99.0, 1.0);
+    o.hide = hide_parts(v.v_col) && !(1.0 /*_FaceMaterial*/) && ((0 /*_ShowPartID*/) != 0);
     TRANSFER_SHADOW_CASTER_NORMALOFFSET(o)
     return o;
 } 
@@ -816,5 +820,6 @@ float4 ps_shadow(shadow_out i, bool vface : SV_ISFRONTFACE) : SV_TARGET
     }        
     #endif
     if((0.0 /*_EnableAlphaCutoff*/)) clip(alpha - saturate(testTresh));
+    if(i.hide) clip(-1);
     return 0.0f;
 }

@@ -72,6 +72,9 @@ SamplerState sampler_linear_clamp;
 UNITY_DECLARE_DEPTH_TEXTURE(_CameraDepthTexture);
 #endif
 float _testA;
+int _ShowPartID;
+int _HideCharaParts;
+int _HideNPCParts;
 float _BaseMaterial;
 float _FaceMaterial;
 float _EyeShadowMat;

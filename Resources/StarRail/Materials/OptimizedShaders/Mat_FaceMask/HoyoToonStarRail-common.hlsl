@@ -517,3 +517,12 @@ float3 DecodeLightProbe( float3 N )
 {
     return ShadeSH9(float4(N,1));
 }
+bool hide_parts(float2 vcol)
+{
+    float2 rgb_vcol = vcol.yx * 256.f;
+    int2 ivcol = (int2)rgb_vcol & (uint2)(0 /*_ShowPartID*/); 
+    bool check1 = 0 < (0 /*_HideCharaParts*/); 
+    bool check2 = 0 < (0 /*_HideNPCParts*/); 
+    int check3 = (check1) ? ivcol.x : (check2) ? ivcol.y : 1;
+    return 0 < check3;
+}

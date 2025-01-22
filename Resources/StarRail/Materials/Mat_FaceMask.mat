@@ -199,6 +199,8 @@ Material:
     - _HairBlendSilhouette: 0.5
     - _HairMaterial: 0
     - _HairSideChoose: 0
+    - _HideCharaParts: 0
+    - _HideNPCParts: 0
     - _InvertDissovle: 0
     - _InvertGradient: 0
     - _IsTransparent: 0
@@ -268,6 +270,7 @@ Material:
     - _ShiftEmissionSpeed: 0
     - _ShiftOutlineSpeed: 0
     - _ShiftRimSpeed: 0
+    - _ShowPartID: 0
     - _SimpleDissolveClip: 0
     - _SkyFresnelBaise: 0
     - _SkyFresnelScale: 0
@@ -361,6 +364,7 @@ Material:
     - end_secondarymain: 0
     - end_selfshadow: 0
     - end_shadowcontrol: 0
+    - end_showids: 0
     - end_specialeffects: 0
     - end_specialeffectsemission: 0
     - end_specular: 0
@@ -491,6 +495,7 @@ Material:
     - start_secondarymain: 0
     - start_selfshadow: 0
     - start_shadowcontrol: 0
+    - start_showids: 0
     - start_specialeffects: 0
     - start_specialeffectsemission: 0
     - start_specular: 0
