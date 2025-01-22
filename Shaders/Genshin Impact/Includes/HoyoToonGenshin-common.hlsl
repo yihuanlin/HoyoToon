@@ -1493,34 +1493,20 @@ void character_stocking(in float3 normal, in float3 view, in float2 uv, in float
     #if defined(use_stockings) 
     if(_UseCharacterStockings)
     {
-        float2 patternUV = uv;
-        // patternUV = patternUV * _StockingsDetailPattenScale + (_StockingsDetailPattenScale * -0.5f);
-        // patternUV = patternUV * _StockingsDetailPattenTiling;
         float2 detailUV = uv;
         float2 decalUV = uv;
 
-        // float pattern = _StockingsDetailTex.Sample(sampler_linear_repeat, patternUV).z;
-
         float4 lightmap = _LightMapTex.Sample(sampler_linear_clamp, uv);
 
+        float3 shifted_view = (view.xzy + float3(0.0f, 0.0f, _StockingsSpecularShift));
 
-        // color.xyz = pattern;
+        float3 half_vector = normalize(shifted_view + _WorldSpaceLightPos0);
 
-        float ndotv = dot(normal, view);
-        float ndotl = dot(normal, _WorldSpaceLightPos0.xyz);
+        float ndoth = dot(normal, half_vector);
 
-        float stocking_light = lerp(0.0f, _StockingsLightColor, lightmap.x);
-        stocking_light = lerp(stocking_light * _StockingsLightScaleInShadow, stocking_light, saturate(ndotl));
+        // color.xyz = ndoth;
 
 
-        float3 stocking_color = lerp(_StockingsShadowColor, 1.0f, ndotl);
-
-        float3 stocking_specular = (saturate(pow(ndotv, _StockingsSpecularSharpe)) * _StockingsSpecularScale) * _StockingsSpecularColor;
-        stocking_specular = stocking_specular * lightmap.z;
-
-        float stocking_light_range = 1.0f - _StockingsLightRange;
-
-        color.xyz = lightmap.x * 0.5 + 0.5;
     }
     #endif
 }
