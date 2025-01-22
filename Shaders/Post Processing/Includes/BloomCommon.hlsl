@@ -260,6 +260,7 @@ float4 sharpening(Texture2D tex, SamplerState smp, float2 uv, float rate)
     float4 color3 = sample_texture(smp, tex, uv + float2(0.0f, texelSize.y));
     float4 color4 = sample_texture(smp, tex, uv + float2(0.0f, -texelSize.y));
     float4 final = (color * center) + (color1 * neighbour) + (color2 * neighbour) + (color3 * neighbour) + (color4 * neighbour);
+    final.a = color.a;
     return saturate(final);
 }
 
@@ -292,8 +293,8 @@ float4 vignette(float4 color, float2 uv)
 float4 tone_mapping(float4 color, float4 bloom, float2 uv, float mask)
 {
     float4 final = color;
-    final = bloom * _MHYBloomIntensity + color;
-    final = final * _MHYBloomExposure;
+    final.xyz = bloom * _MHYBloomIntensity + color;
+    final.xyz = final * _MHYBloomExposure;
 
     float3 tmp = final.xyz;
     float3 f0 = (1.36 * final + 0.047) * final;
@@ -360,7 +361,7 @@ float3 LUT_2D(float3 color, float4 lutParams)
 float4 tone_mapping_star_rail(float4 color, float4 bloom, float2 uv)
 {
     float4 final = max(color, 0.0f);
-    final = bloom * _MHYBloomIntensity + color;
+    final.xyz = bloom * _MHYBloomIntensity + color;
     final.xyz = LUT_2D(final, _Lut2DTexParam);
     return final;   
 }
