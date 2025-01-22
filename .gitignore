@@ -77,3 +77,5 @@ Private.meta
 /Scripts/Editor/VRChat
 Scripts/Editor/VRChat.meta
 /Shaders/ZenlessZoneZero
+requirements.txt
+requirements.txt.meta
