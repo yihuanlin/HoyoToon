@@ -84,6 +84,11 @@ UNITY_DECLARE_DEPTH_TEXTURE(_CameraDepthTexture);
 
 float _testA;
 
+// man
+int _ShowPartID;
+int _HideCharaParts;
+int _HideNPCParts;
+
 // MATERIAL STATES
 float _BaseMaterial;
 float _FaceMaterial;

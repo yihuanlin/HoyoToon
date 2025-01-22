@@ -50,4 +50,5 @@ struct shadow_out
     float3 view : TEXCOORD2;
     float4 dis_uv : TEXCOORD3;
     float4 dis_pos : TEXCOORD4;
+    float hide : TEXCOORD5;
 };
