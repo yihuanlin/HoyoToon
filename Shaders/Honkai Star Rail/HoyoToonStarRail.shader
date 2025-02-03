@@ -90,7 +90,7 @@ Shader "HoyoToon/Star Rail/Character"
             [HideInInspector] start_showids ("Show IDS", Float) = 0
                 [IntRange] _ShowPartID ("Show Part ID", Range(-256,256)) = 0
                 [Toggle]_HideCharaParts ("Hide Character Parts", Float) = 0
-                [Toggle]_HideNPCParts ("Hide NPC Parts", Float) = 0
+                [Toggle]_HideNPCParts ("Hide NPC Parts", Float) = 1
             [HideInInspector] end_showids ("", Float) = 0
         [HideInInspector] end_main ("", Float) = 0
         // -------------------------------------------
