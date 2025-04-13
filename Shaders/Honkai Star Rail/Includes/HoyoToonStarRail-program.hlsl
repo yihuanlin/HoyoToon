@@ -61,71 +61,114 @@ vs_out vs_edge(vs_in v)
     {
         if(_FaceMaterial) // sigh is this even going to work in vr? 
         {
-            float4 tmp0;
-            float4 tmp1;
-            float4 tmp2;
-            float4 tmp3;
-            tmp0.xy = float2(-0.206, 0.961);
-            tmp0.z = _OutlineFixSide;
-            tmp1.xyz = mul(v.vertex.xyz, (float3x3)unity_ObjectToWorld).xyz;
-            tmp2.xyz = _WorldSpaceCameraPos - tmp1.xyz;
-            tmp1.xyz = mul(tmp1.xyz, (float3x3)unity_ObjectToWorld).xyz;
-            tmp0.w = length(tmp1.xyz);
-            tmp1.yzw = tmp0.w * tmp1.xyz;
-            tmp0.w = tmp1.x * tmp0.w + -0.1;
-            tmp0.x = dot(tmp0.xyz, tmp1.xyz); 
-            tmp2.yz = float2(-0.206, 0.961);
-            tmp2.xw = -float2(_OutlineFixSide.x, _OutlineFixFront.x);
-            tmp0.y = dot(tmp2.xyz, tmp1.xyz);
-            tmp0.z = dot(float2(0.076, 0.961), tmp1.xy);
-            tmp0.x = max(tmp0.y, tmp0.x);
-            tmp0.x = 0.1 - tmp0.x;
-            tmp0.x = tmp0.x * 9.999998;
-            tmp0.x = max(tmp0.x, 0.0);
-            tmp0.y = tmp0.x * -2.0 + 3.0;
-            tmp0.x = tmp0.x * tmp0.x;
-            tmp0.x = tmp0.x * tmp0.y;
-            tmp0.x = min(tmp0.x, 1.0);
-            tmp0.y = saturate(tmp0.z);
-            tmp0.z = 1.0 - tmp0.z;
-            tmp0.y = tmp2.x + tmp0.y;
-            tmp0.yw = saturate(tmp0.yw * float2(20.0, 5.0));
-            tmp1.x = tmp0.y * -2.0 + 3.0;
-            tmp0.y = tmp0.y * tmp0.y;
-            tmp0.y = tmp0.y * tmp1.x;
-            tmp0.x = max(tmp0.x, tmp0.y);
-            tmp0.x = min(tmp0.x, 1.0);
-            tmp0.x = tmp0.x - 1.0;
-            tmp0.x = v.v_col.y * tmp0.x + 1.0;
-            tmp0.x = tmp0.x * _OutlineWidth;
-            tmp0.x = tmp0.x * _OutlineScale;
-            tmp0.y = tmp0.w * -2.0 + 3.0;
-            tmp0.w = tmp0.w * tmp0.w;
-            tmp0.y = tmp0.w * tmp0.y;
-            tmp1.xy = -float2(_OutlineFixRange1.x, _OutlineFixRange2.x) + float2(_OutlineFixRange3.x, _OutlineFixRange4.x);
-            tmp0.yw = tmp0.yy * tmp1.xy + float2(_OutlineFixRange1.x, _OutlineFixRange2.x);
-
-            tmp0.y = smoothstep(tmp0.y, tmp0.w, tmp0.z);
-
-            tmp0.y = tmp0.y * v.v_col.z;
-            tmp0.zw = v.v_col.zy > float2(0.0, 0.0);
-            tmp0.y = tmp0.z ? tmp0.y : v.v_col.w;
-            tmp0.z = v.v_col.y < 1.0;
-            tmp0.z = tmp0.w ? tmp0.z : 0.0;
-            tmp0.z = tmp0.z ? 1.0 : 0.0;
-            tmp0.y = tmp0.z * _FixLipOutline + tmp0.y;
-            tmp0.x = tmp0.y * tmp0.x;
-
-
-            float3 outline_normal;
-            outline_normal = mul((float3x3)UNITY_MATRIX_IT_MV, v.tangent.xyz);
-            outline_normal.z = -1;
-            outline_normal.xyz = normalize(outline_normal.xyz);
-            float4 wv_pos = mul(UNITY_MATRIX_MV, v.vertex);
-            float fov_width = 1.0f / (rsqrt(abs(wv_pos.z / unity_CameraProjection._m11)));
-            if(!_EnableFOVWidth) fov_width = 1;
-            wv_pos.xyz = wv_pos + (outline_normal * fov_width * tmp0.x);
-            o.pos = mul(UNITY_MATRIX_P, wv_pos);
+            // Define meaningful variables for face outline calculation
+            float4 outlineParams;
+            float4 cameraDistanceFactors;
+            float4 faceDirectionFactors;
+            float4 outlineRangeParams;
+            
+            // Setup initial direction constants
+            outlineParams.xy = float2(-0.206, 0.961); // Side direction constants
+            outlineParams.z = _OutlineFixSide;
+            
+            // Calculate world position and camera direction
+            faceDirectionFactors.xyz = mul(v.vertex.xyz, (float3x3)unity_ObjectToWorld).xyz;
+            cameraDistanceFactors.xyz = _WorldSpaceCameraPos - faceDirectionFactors.xyz;
+            faceDirectionFactors.xyz = mul(faceDirectionFactors.xyz, (float3x3)unity_ObjectToWorld).xyz;
+            
+            // Calculate distance and position factors
+            float distanceToCamera = length(faceDirectionFactors.xyz);
+            faceDirectionFactors.yzw = distanceToCamera * faceDirectionFactors.xyz;
+            outlineParams.w = faceDirectionFactors.x * distanceToCamera + -0.1;
+            
+            // Calculate side direction factor
+            float sideFactor = dot(outlineParams.xyz, faceDirectionFactors.xyz);
+            
+            // Setup front direction constants
+            cameraDistanceFactors.yz = float2(-0.206, 0.961); // Front direction constants
+            cameraDistanceFactors.xw = -float2(_OutlineFixSide.x, _OutlineFixFront.x);
+            
+            // Calculate front direction factor
+            float frontFactor = dot(cameraDistanceFactors.xyz, faceDirectionFactors.xyz);
+            
+            // Calculate top direction factor
+            float topFactor = dot(float2(0.076, 0.961), faceDirectionFactors.xy);
+            
+            // Determine maximum direction factor
+            float maxDirectionFactor = max(frontFactor, sideFactor);
+            float directionBlendFactor = 0.1 - maxDirectionFactor;
+            directionBlendFactor = directionBlendFactor * 9.999998;
+            directionBlendFactor = max(directionBlendFactor, 0.0);
+            
+            // Apply smoothstep to direction factor
+            float smoothStepFactor = directionBlendFactor * -2.0 + 3.0;
+            directionBlendFactor = directionBlendFactor * directionBlendFactor;
+            directionBlendFactor = directionBlendFactor * smoothStepFactor;
+            directionBlendFactor = min(directionBlendFactor, 1.0);
+            
+            // Calculate top direction blend
+            float topFactorSaturated = saturate(topFactor);
+            float invertedTopFactor = 1.0 - topFactor;
+            float blendedTopFactor = cameraDistanceFactors.x + topFactorSaturated;
+            
+            // Apply saturation to factors
+            float2 saturatedFactors = saturate(float2(blendedTopFactor, invertedTopFactor) * float2(20.0, 5.0));
+            blendedTopFactor = saturatedFactors.x;
+            invertedTopFactor = saturatedFactors.y;
+            
+            // Apply smoothstep to top factor
+            float topSmoothStep = blendedTopFactor * -2.0 + 3.0;
+            blendedTopFactor = blendedTopFactor * blendedTopFactor;
+            blendedTopFactor = blendedTopFactor * topSmoothStep;
+            
+            // Combine direction factors
+            directionBlendFactor = max(directionBlendFactor, blendedTopFactor);
+            directionBlendFactor = min(directionBlendFactor, 1.0);
+            directionBlendFactor = directionBlendFactor - 1.0;
+            
+            // Apply vertex color and outline width
+            float vertexColorFactor = v.v_col.y * directionBlendFactor + 1.0;
+            float outlineWidthFactor = vertexColorFactor * _OutlineWidth;
+            outlineWidthFactor = outlineWidthFactor * _OutlineScale;
+            
+            // Calculate distance-based smoothing
+            float distanceSmoothStep = distanceToCamera * -2.0 + 3.0;
+            float squaredDistance = distanceToCamera * distanceToCamera;
+            distanceSmoothStep = squaredDistance * distanceSmoothStep;
+            
+            // Calculate outline range interpolation
+            float2 outlineRanges = -float2(_OutlineFixRange1.x, _OutlineFixRange2.x) + float2(_OutlineFixRange3.x, _OutlineFixRange4.x);
+            float2 interpolatedRanges = distanceSmoothStep * outlineRanges + float2(_OutlineFixRange1.x, _OutlineFixRange2.x);
+            
+            // Apply smoothstep between ranges
+            float rangeBlendFactor = smoothstep(interpolatedRanges.x, interpolatedRanges.y, invertedTopFactor);
+            
+            // Apply vertex color adjustments
+            rangeBlendFactor = rangeBlendFactor * v.v_col.z;
+            bool2 vertexColorMask = v.v_col.zy > float2(0.0, 0.0);
+            rangeBlendFactor = vertexColorMask.x ? rangeBlendFactor : v.v_col.w;
+            
+            // Apply lip outline fix if needed
+            bool needsLipFix = v.v_col.y < 1.0;
+            bool applyLipFix = vertexColorMask.y ? needsLipFix : false;
+            float lipFixFactor = applyLipFix ? 1.0 : 0.0;
+            rangeBlendFactor = lipFixFactor * _FixLipOutline + rangeBlendFactor;
+            
+            // Final outline width calculation
+            outlineWidthFactor = rangeBlendFactor * outlineWidthFactor;
+            
+            // Apply outline to vertex position
+            float3 outlineNormal;
+            outlineNormal = mul((float3x3)UNITY_MATRIX_IT_MV, v.tangent.xyz);
+            outlineNormal.z = -1;
+            outlineNormal.xyz = normalize(outlineNormal.xyz);
+            
+            float4 worldViewPos = mul(UNITY_MATRIX_MV, v.vertex);
+            float fovWidthFactor = 1.0f / (rsqrt(abs(worldViewPos.z / unity_CameraProjection._m11)));
+            if(!_EnableFOVWidth) fovWidthFactor = 1;
+            
+            worldViewPos.xyz = worldViewPos + (outlineNormal * fovWidthFactor * outlineWidthFactor);
+            o.pos = mul(UNITY_MATRIX_P, worldViewPos);
         }
         else
         {
@@ -206,6 +249,7 @@ float4 ps_base(vs_out i, bool vface : SV_IsFrontFace) : SV_Target
     float emis_area = 0.0f;
     float3 test_normal = normal;
     float3 tangents = i.tangent.xyz;
+
     // MATERIAL COLOR :
     float4 color = (_HairMaterial) ? _Color0 * _Color : _Color;
 
@@ -444,6 +488,12 @@ float4 ps_base(vs_out i, bool vface : SV_IsFrontFace) : SV_Target
         };
 
         if(!_HairMaterial)out_color = out_color * mat_color[material_ID];
+
+        if(_UseCustomColors)
+        {
+            float alpha_tex = _AlphaTex.Sample(sampler_linear_repeat, uv).x;
+            custom_coloring(diffuse, alpha_tex);
+        }
         // // ================================================================================================ //
         // SHADOW AREA :
         float3 shadow_color = (float3)1.0f;
@@ -533,44 +583,46 @@ float4 ps_base(vs_out i, bool vface : SV_IsFrontFace) : SV_Target
 
         // ================================================================================================ //
         // specular : 
+        // initialize specular values because the fucking matcap uses it.. thank you 
+        float4 specular_color[8] =
+        {
+            _SpecularColor0,
+            _SpecularColor1,
+            _SpecularColor2,
+            _SpecularColor3,
+            _SpecularColor4,
+            _SpecularColor5,
+            _SpecularColor6,
+            _SpecularColor7,
+        };
+
+        float3 specular_values[8] =
+        {
+            float3(_SpecularShininess0, _SpecularRoughness0, _SpecularIntensity0),
+            float3(_SpecularShininess1, _SpecularRoughness1, _SpecularIntensity1),
+            float3(_SpecularShininess2, _SpecularRoughness2, _SpecularIntensity2),
+            float3(_SpecularShininess3, _SpecularRoughness3, _SpecularIntensity3),
+            float3(_SpecularShininess4, _SpecularRoughness4, _SpecularIntensity4),
+            float3(_SpecularShininess5, _SpecularRoughness5, _SpecularIntensity5),
+            float3(_SpecularShininess6, _SpecularRoughness6, _SpecularIntensity6),
+            float3(_SpecularShininess7, _SpecularRoughness7, _SpecularIntensity7),
+        };
+        
+        if(_UseMaterialValuesLUT)
+        {
+            specular_color[curr_region] = lut_speccol;
+            specular_values[curr_region] = lut_specval.xyz * float3(10.0f, 2.0f, 2.0f); // weird fix, not accurate to ingame code but whatever if it works it works
+        }
+        if(_FaceMaterial)
+        {
+            specular_color[curr_region] = (float4)0.0f;
+        }
+
+        specular_values[curr_region].z = max(0.0f, specular_values[curr_region].z); // why would there ever be a reason for a negative specular intensity
+
         #if defined(use_specular)
             if(_EnableSpecular)
             {
-                float4 specular_color[8] =
-                {
-                    _SpecularColor0,
-                    _SpecularColor1,
-                    _SpecularColor2,
-                    _SpecularColor3,
-                    _SpecularColor4,
-                    _SpecularColor5,
-                    _SpecularColor6,
-                    _SpecularColor7,
-                };
-
-                float3 specular_values[8] =
-                {
-                    float3(_SpecularShininess0, _SpecularRoughness0, _SpecularIntensity0),
-                    float3(_SpecularShininess1, _SpecularRoughness1, _SpecularIntensity1),
-                    float3(_SpecularShininess2, _SpecularRoughness2, _SpecularIntensity2),
-                    float3(_SpecularShininess3, _SpecularRoughness3, _SpecularIntensity3),
-                    float3(_SpecularShininess4, _SpecularRoughness4, _SpecularIntensity4),
-                    float3(_SpecularShininess5, _SpecularRoughness5, _SpecularIntensity5),
-                    float3(_SpecularShininess6, _SpecularRoughness6, _SpecularIntensity6),
-                    float3(_SpecularShininess7, _SpecularRoughness7, _SpecularIntensity7),
-                };
-                
-                if(_UseMaterialValuesLUT)
-                {
-                    specular_color[curr_region] = lut_speccol;
-                    specular_values[curr_region] = lut_specval.xyz * float3(10.0f, 2.0f, 2.0f); // weird fix, not accurate to ingame code but whatever if it works it works
-                }
-                if(_FaceMaterial)
-                {
-                    specular_color[curr_region] = (float4)0.0f;
-                }
-                specular_values[curr_region].z = max(0.0f, specular_values[curr_region].z); // why would there ever be a reason for a negative specular intensity
-
                 specular = specular_base(shadow_area, ndoth, lightmap.z, specular_color[curr_region], specular_values[curr_region], _ES_SPColor, _ES_SPIntensity);
             }
           #endif
@@ -610,6 +662,10 @@ float4 ps_base(vs_out i, bool vface : SV_IsFrontFace) : SV_Target
 
             float3 stocking = -diffuse.xyz * stock_dark_area + _Stockcolor;
             stocking = stock_rim * stocking + stock_darkened;
+        #endif
+
+        #if defined(use_matcap)
+        if(_UseMatcap) matcap_color(normal, view, shadow_area, lightmap.z, uv, specular_values[curr_region].z, specular_color[curr_region], diffuse.xyz);
         #endif
         // ================================================================================================ //
         // rim shadow

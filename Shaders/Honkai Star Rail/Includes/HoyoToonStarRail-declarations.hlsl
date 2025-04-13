@@ -36,6 +36,9 @@ Texture2D _HueMaskTexture;
 
 float4 _CausTexture_ST;
 
+Texture2D _AlphaTex;
+
+
 Texture2D _DisTex;
 Texture2D _MaskTex;
 Texture2D _NoiseTex;
@@ -497,6 +500,40 @@ float _RimHue5;
 float _RimHue6;
 float _RimHue7;
 float _RimHue8;
+
+// custom colors
+float _UseCustomColors;
+float4 _CustomSkinColor;
+float4 _CustomSkinColor1;
+float4 _CustomColor0;
+float4 _CustomColor1;
+float4 _CustomColor2;
+float4 _CustomColor3;
+float4 _CustomColor4;
+float4 _CustomColor5;
+float4 _CustomColor6;
+float4 _CustomColor7;
+float4 _CustomColor8;
+float4 _CustomColor9;
+float4 _CustomColor10;
+float4 _CustomColor11;
+float4 _CustomColor12;
+float4 _CustomColor13;
+
+// matcaps
+#if defined(use_matcap)
+    Texture2D _MatCapMaskTex;
+    Texture2D _MatCapTex;
+    TextureCube _CubeMap;
+#endif
+float _OnlyMask;
+float _UseCubeMap;
+float _ReplaceColor;
+float _UseMatcap;
+float4 _MatCapColor;
+float _MatCapStrength;
+float _MatCapStrengthInShadow;
+
 
 float _DebugMode;
 float _DebugDiffuse;

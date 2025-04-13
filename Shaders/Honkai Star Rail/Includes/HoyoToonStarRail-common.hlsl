@@ -197,50 +197,70 @@ float remap(float value, float old_min, float old_max, float new_min, float new_
 void dissolve_vertex(vs_in i, out float4 dis_pos, out float4 dis_uv)
 {
     #if defined(can_dissolve)
+        // Get the appropriate UV coordinates based on the dissolve UV setting
         float2 dissolveUV = lerp(i.uv_0, i.uv_1, _DissolveUV);
-
-        dis_uv = float4(dissolveUV.xy * _DissolveST.xy + _DissolveST.zw, dissolveUV.xy * _DistortionST.xy + _DistortionST.zw);
-
+        
+        // Calculate the final UV coordinates for both dissolve and distortion effects
+        dis_uv = float4(
+            dissolveUV.xy * _DissolveST.xy + _DissolveST.zw,     // Dissolve UVs
+            dissolveUV.xy * _DistortionST.xy + _DistortionST.zw  // Distortion UVs
+        );
+        
+        // Store the original UV x-coordinate
         dis_pos.x = dissolveUV.x;
-
+        
+        // Transform vertex position to world space
         float4 ws_pos = mul(unity_ObjectToWorld, i.vertex);
-
+        
+        // Choose between local and world space position based on mask setting
         float4 dissolvePos = lerp(i.vertex, ws_pos, _DissolvePosMaskWorldON);
-
-        float3 u_xlat1;
-        float4 u_xlat2;
-        float4 u_xlat3;
-        float3 u_xlat16_4;
-        float3 u_xlat6;
-        float u_xlat16_9;
-        float u_xlat16;
-        bool u_xlatb16;
-
-        u_xlat1.xyz = dissolvePos;
-
-        u_xlat2.xyz = (-u_xlat1.xyz) + _ES_EffCustomLightPosition.xyz;
-        u_xlat1.xyz = (float3)(_DissolvePosMaskGlobalOn) * u_xlat2.xyz + u_xlat1.xyz;
-        u_xlat1.xyz = u_xlat1.xyz + (-_DissolvePosMaskRootOffset.xyz);
-        u_xlat2.xyz = _ES_EffCustomLightPosition.xyz + (-unity_ObjectToWorld[3].xyz);
-        u_xlat3.xyz = (float3)(_DissolvePosMaskWorldON) * (-unity_ObjectToWorld[3].xyz) + _DissolvePosMaskPos.xyz;
-        u_xlat2.xyz = u_xlat2.xyz + (-u_xlat3.xyz);
-        u_xlat2.xyz = (float3)(_DissolvePosMaskGlobalOn) * u_xlat2.xyz + u_xlat3.xyz;
-        u_xlat16_4.x = dot(u_xlat2.xyz, u_xlat2.xyz);
-        u_xlat16_4.x = rsqrt(u_xlat16_4.x);
-        u_xlat16_4.xyz = u_xlat2.xyz * u_xlat16_4.xxx;
-        u_xlat16 = dot(abs(u_xlat2.xyz), float3(1.0, 1.0, 1.0));
-        u_xlatb16 = u_xlat16>=0.00100000005;
-        u_xlat1.x = dot(u_xlat16_4.xyz, u_xlat1.xyz);
-        u_xlat16_4.x = max(_DissolvePosMaskPos.w, 0.00999999978);
-        u_xlat16_9 = abs(u_xlat1.x) + u_xlat16_4.x;
-        u_xlat16_4.x = u_xlat16_4.x + u_xlat16_4.x;
-        u_xlat16_4.x = u_xlat16_9 / u_xlat16_4.x;
-        u_xlat16_9 = u_xlat16_4.x * -2.0 + 1.0;
-        u_xlat16_4.x = _DissolvePosMaskFilpOn * u_xlat16_9 + u_xlat16_4.x;
-        u_xlat16_4.x = u_xlat16_4.x + (-_DissolvePosMaskOn);
-        u_xlat16_4.x = u_xlat16_4.x + 1.0;
-        u_xlat16_4.x = clamp(u_xlat16_4.x, 0.0, 1.0);
-        dis_pos.y = (u_xlatb16) ? u_xlat16_4.x : 1.0;
+        
+        // Position mask calculation
+        float3 posToLight = dissolvePos.xyz - _ES_EffCustomLightPosition.xyz;
+        float3 adjustedPos = dissolvePos.xyz;
+        
+        // Apply global position adjustment if enabled
+        if (_DissolvePosMaskGlobalOn) {
+            adjustedPos = dissolvePos.xyz - posToLight;
+        }
+        
+        // Apply root offset
+        adjustedPos -= _DissolvePosMaskRootOffset.xyz;
+        
+        // Calculate light direction
+        float3 lightOffset = _ES_EffCustomLightPosition.xyz - unity_ObjectToWorld[3].xyz;
+        float3 maskPos = _DissolvePosMaskWorldON ? _DissolvePosMaskPos.xyz - unity_ObjectToWorld[3].xyz : _DissolvePosMaskPos.xyz;
+        float3 lightDir = lightOffset - maskPos;
+        
+        // Apply global adjustment to light direction if enabled
+        if (_DissolvePosMaskGlobalOn) {
+            lightDir = maskPos;
+        }
+        
+        // Normalize light direction
+        float lightDirLength = length(lightDir);
+        float3 normalizedLightDir = lightDir / lightDirLength;
+        
+        // Check if light direction is valid
+        bool isValidLightDir = (dot(abs(lightDir), float3(1.0, 1.0, 1.0)) >= 0.001);
+        
+        // Calculate dot product for position masking
+        float dotProduct = dot(normalizedLightDir, adjustedPos);
+        
+        // Calculate mask threshold and range
+        float maskRadius = max(_DissolvePosMaskPos.w, 0.01);
+        float maskValue = (abs(dotProduct) + maskRadius) / (2.0 * maskRadius);
+        
+        // Apply flip if enabled
+        if (_DissolvePosMaskFilpOn) {
+            maskValue = 1.0 - maskValue;
+        }
+        
+        // Apply mask settings and clamp result
+        float finalMask = clamp(maskValue + (1.0 - _DissolvePosMaskOn), 0.0, 1.0);
+        
+        // Store the calculated mask value or 1.0 if light direction is invalid
+        dis_pos.y = isValidLightDir ? finalMask : 1.0;
         dis_pos.zw = float2(0.0, 0.0);
     #endif
 }
@@ -299,10 +319,16 @@ void dissolve_color(float4 ws_pos, float4 dis_pos, float4 dis_uv, float2 uv,in f
         if(_InvertRate) rate = 1.0 - rate;
         if(_DissolveUseDirection)
         {
-            float3 u_xlat2  = ws_pos.xyz + (-_DissolveCenter.xyz);
-            float u_xlat0 = dot(u_xlat2.xyz, _DissolveDiretcionXYZ.xyz);
-            int test = 0.0<u_xlat0 ? (int)2 : (int)0;
-            if((test)==0){discard;}
+            // Calculate vector from dissolve center to world position
+            float3 directionVector = ws_pos.xyz - _DissolveCenter.xyz;
+            
+            // Project vector onto the dissolve direction
+            float projectionValue = dot(directionVector, _DissolveDiretcionXYZ.xyz);
+            
+            // Discard fragments that are behind the dissolve direction
+            if (projectionValue <= 0.0) {
+                discard;
+            }
         }
         else
         {
@@ -321,55 +347,53 @@ void dissolve_color(float4 ws_pos, float4 dis_pos, float4 dis_uv, float2 uv,in f
             dissolveDirMask = dissolveMask.x * dissolveDirMask;
             dissolveDirMask = dissolveDirMask * dis_pos.y;
             dissolveDirMask = dissolveDirMask * 1.00999999 + -0.00999999978;
-            // float dissolveRate = dissolveDirMask + (-_DissolveRate);
-            // dissolveRate = dissolveRate + 1.0;
-            // dissolveRate = floor(dissolveDirMask);
-            // dissolveRate = max(dissolveRate, 0.0);
-            // if((int)dissolveRate == 0) discard;
-            // the above is redundent code since its essentially handled in the dissolve_vertex function above.
             
-            float4 u_xlat16_8;
-            float4 u_xlat16_11;
-            float4 u_xlat16_12;
-            float4 u_xlat16_18;
-            float4 u_xlat2;
-            float4 u_xlat4;
-            float4 u_xlat7;
-            float4 u_xlat16_3;
-            float4 u_xlat16_5;
-            float4 u_xlat16_23;
-            float4 u_xlat16_38;
-            float4 u_xlat16_0;
-            float4 u_xlat16_1;
-            float4 u_xlat16_2;
-            float4 u_xlat16_4;
-            float4 u_xlat16_6;
-
-
-            u_xlat16_8.x = rate + _DissolveOutlineSize1;
-            u_xlat16_8.y = u_xlat16_8.x + (-_DissolveOutlineSize2);
-            u_xlat16_8.xy = dissolveDirMask.xx + (-u_xlat16_8.xy);
-            u_xlat16_38.xy = _DissolveOutlineSmoothStep.xy + 0.00100000005f;
-            u_xlat16_38.xy = float2(1.0, 1.0) / u_xlat16_38.xy;
-            u_xlat16_8.xy = u_xlat16_38.xy * u_xlat16_8.xy;
-            u_xlat16_8.xy = clamp(u_xlat16_8.xy, 0.0, 1.0);
-            u_xlat16_11.xyz = diffuse.xyz * dissolveMap.x + _DissolveOutlineOffset;
-            u_xlat16_12.xyz = u_xlat16_11.xyz * _DissolveOutlineColor1.xyz;
-            u_xlat16_11.xyz = u_xlat16_11.xyz * _DissolveOutlineColor2.xyz + (-u_xlat16_12.xyz);
-            u_xlat16_23.xyz = u_xlat16_8.yyy * u_xlat16_11.xyz + u_xlat16_12.xyz;
-            u_xlat16_3.x = u_xlat16_8.x + 1.0;
-            u_xlat16_3.x = u_xlat16_3.x + (-_DissolveOutlineColor1.w);
-            u_xlat16_3.x = clamp(u_xlat16_3.x, 0.0, 1.0);
-            u_xlat16_18.xyz = color.xyz * 1.0f + (-u_xlat16_23.xyz);
-            u_xlat16_18.xyz = u_xlat16_3.xxx * u_xlat16_18.xyz + u_xlat16_23.xyz;
-            u_xlat2.xyz = u_xlat16_18.xyz * 278.508514f + 10.7771997f;
-            u_xlat2.xyz = u_xlat2.xyz * u_xlat16_18.xyz;
-            u_xlat4.xyz = u_xlat16_18.xyz * 298.604492f + 88.7121964f;
-            u_xlat4.xyz = u_xlat16_18.xyz * u_xlat4.xyz + 80.6889038f;
-            u_xlat2.xyz = u_xlat2.xyz / u_xlat4.xyz;
-            u_xlat4.xyz = (-u_xlat2.xyz) + u_xlat16_18.xyz;
-            u_xlat7.xyz = u_xlat16_3.xxx * u_xlat4.xyz + u_xlat2.xyz;
-            color.xyz = u_xlat7.xyz;
+            // Calculate dissolve outline boundaries
+            float outlineOuter = rate + _DissolveOutlineSize1;
+            float outlineInner = outlineOuter - _DissolveOutlineSize2;
+            
+            // Calculate how far the current fragment is from each boundary
+            float2 distanceFromBoundaries = float2(
+                dissolveDirMask - outlineOuter,
+                dissolveDirMask - outlineInner
+            );
+            
+            // Apply smoothstep for soft transitions
+            float2 smoothStepFactors = _DissolveOutlineSmoothStep.xy + 0.001f;
+            float2 smoothStepInverse = 1.0f / smoothStepFactors;
+            
+            // Calculate transition factors
+            float2 transitionFactors = smoothStepInverse * distanceFromBoundaries;
+            transitionFactors = clamp(transitionFactors, 0.0, 1.0);
+            
+            // Calculate base color for dissolve effect
+            float3 dissolveBaseColor = diffuse.xyz * dissolveMap.x + _DissolveOutlineOffset;
+            
+            // Calculate inner and outer outline colors
+            float3 outerOutlineColor = dissolveBaseColor * _DissolveOutlineColor1.xyz;
+            float3 innerOutlineColor = dissolveBaseColor * _DissolveOutlineColor2.xyz;
+            
+            // Blend between inner and outer outline colors
+            float3 blendedOutlineColor = lerp(outerOutlineColor, innerOutlineColor, transitionFactors.y);
+            
+            // Calculate alpha factor for blending with original color
+            float alphaFactor = transitionFactors.x + 1.0 - _DissolveOutlineColor1.w;
+            alphaFactor = clamp(alphaFactor, 0.0, 1.0);
+            
+            // Blend between original color and outline color
+            float3 finalColor = lerp(blendedOutlineColor, color.xyz * 1.0f, alphaFactor);
+            
+            // Apply color correction (tone mapping approximation)
+            float3 correctionNumerator = finalColor * 278.508514f + 10.7771997f;
+            correctionNumerator = correctionNumerator * finalColor;
+            
+            float3 correctionDenominator = finalColor * 298.604492f + 88.7121964f;
+            correctionDenominator = finalColor * correctionDenominator + 80.6889038f;
+            
+            float3 correctedColor = correctionNumerator / correctionDenominator;
+            
+            // Final blend based on alpha factor
+            color.xyz = lerp(correctedColor, finalColor, alphaFactor);
 
         }
     #endif
@@ -377,35 +401,9 @@ void dissolve_color(float4 ws_pos, float4 dis_pos, float4 dis_uv, float2 uv,in f
 
 void heightlightlerp(float4 pos, inout float4 color)
 {
-    // (u_xlat75 = (vs_TEXCOORD2.y + (-_CharaWorldSpaceOffset.y)));
-    // (u_xlat16_30.x = max(_ES_HeightLerpBottom, 0.001));
-    // (u_xlat76 = (1.0 / u_xlat16_30.x));
-    // (u_xlat76 = (u_xlat75 * u_xlat76));
-    // (u_xlat76 = clamp(u_xlat76, 0.0, 1.0));
-    // (u_xlat2.x = ((u_xlat76 * -2.0) + 3.0));
-    // (u_xlat76 = (u_xlat76 * u_xlat76));
-    // (u_xlat76 = (((-u_xlat2.x) * u_xlat76) + 1.0));
-    // (u_xlat75 = (u_xlat75 + (-_ES_HeightLerpTop)));
-    // (u_xlat75 = (u_xlat75 + u_xlat75));
-    // (u_xlat75 = clamp(u_xlat75, 0.0, 1.0));
-    // (u_xlat2.x = ((u_xlat75 * -2.0) + 3.0));
-    // (u_xlat75 = (u_xlat75 * u_xlat75));
-    // (u_xlat27 = (u_xlat75 * u_xlat2.x));
-    // (u_xlat16_30.x = ((-u_xlat76) + 1.0));
-    // (u_xlat16_30.x = (((-u_xlat2.x) * u_xlat75) + u_xlat16_30.x));
-    // (u_xlat16_30.x = clamp(u_xlat16_30.x, 0.0, 1.0));
-    // (u_xlat16_7.xyz = (vec3(u_xlat76) * _ES_HeightLerpBottomColor.xyz));
-    // (u_xlat16_30.xyz = (u_xlat16_30.xxx * _ES_HeightLerpMiddleColor.xyz));
-    // (u_xlat16_30.xyz = (u_xlat16_30.xyz * _ES_HeightLerpMiddleColor.www));
-    // (u_xlat16_30.xyz = ((u_xlat16_7.xyz * _ES_HeightLerpBottomColor.www) + u_xlat16_30.xyz));
-    // (u_xlat16_7.xyz = (vec3(u_xlat27) * _ES_HeightLerpTopColor.xyz));
-    // (u_xlat16_30.xyz = ((u_xlat16_7.xyz * _ES_HeightLerpTopColor.www) + u_xlat16_30.xyz));
-    // (u_xlat16_30.xyz = clamp(u_xlat16_30.xyz, 0.0, 1.0));
-    // (u_xlat16_30.xyz = (u_xlat16_30.xyz * u_xlat16_8.xyz));
-    // (u_xlat16_30.xyz = (u_xlat16_30.xyz + u_xlat16_30.xyz));
-
     float height = pos.y + (-_CharaWorldSpaceOffset);
 
+    // Height-based color lerping variables
     float4 u_xlat16_30;
     float u_xlat75;
     float u_xlat76;
@@ -413,35 +411,44 @@ void heightlightlerp(float4 pos, inout float4 color)
     float u_xlat27;
     float4 u_xlat16_7;
 
+    // Use the world space height
     u_xlat75 = height;
 
-    (u_xlat16_30.x = max(_ES_HeightLerpBottom, 0.001));
-    (u_xlat76 = (1.0 / u_xlat16_30.x));
-    (u_xlat76 = (u_xlat75 * u_xlat76));
-    (u_xlat76 = clamp(u_xlat76, 0.0, 1.0));
-    (u_xlat2.x = ((u_xlat76 * -2.0) + 3.0));
-    (u_xlat76 = (u_xlat76 * u_xlat76));
-    (u_xlat76 = (((-u_xlat2.x) * u_xlat76) + 1.0));
-    (u_xlat75 = (u_xlat75 + (-_ES_HeightLerpTop)));
-    (u_xlat75 = (u_xlat75 + u_xlat75));
-    (u_xlat75 = clamp(u_xlat75, 0.0, 1.0));
-    (u_xlat2.x = ((u_xlat75 * -2.0) + 3.0));
-    (u_xlat75 = (u_xlat75 * u_xlat75));
-    (u_xlat27 = (u_xlat75 * u_xlat2.x));
-    (u_xlat16_30.x = ((-u_xlat76) + 1.0));
-    (u_xlat16_30.x = (((-u_xlat2.x) * u_xlat75) + u_xlat16_30.x));
-    (u_xlat16_30.x = clamp(u_xlat16_30.x, 0.0, 1.0));
-    (u_xlat16_7.xyz = ((float3)(u_xlat76) * _ES_HeightLerpBottomColor.xyz));
-    (u_xlat16_30.xyz = (u_xlat16_30.xxx * _ES_HeightLerpMiddleColor.xyz));
-    (u_xlat16_30.xyz = (u_xlat16_30.xyz * _ES_HeightLerpMiddleColor.www));
-    (u_xlat16_30.xyz = ((u_xlat16_7.xyz * _ES_HeightLerpBottomColor.www) + u_xlat16_30.xyz));
-    (u_xlat16_7.xyz = ((float3)(u_xlat27) * _ES_HeightLerpTopColor.xyz));
-    (u_xlat16_30.xyz = ((u_xlat16_7.xyz * _ES_HeightLerpTopColor.www) + u_xlat16_30.xyz));
-    (u_xlat16_30.xyz = clamp(u_xlat16_30.xyz, 0.0, 1.0));
-    (u_xlat16_30.xyz = (u_xlat16_30.xyz * color.xyz));
-    // (u_xlat16_30.xyz = (u_xlat16_30.xyz + u_xlat16_30.xyz));
-    color.xyz = u_xlat16_30;
-
+    // Bottom region calculation
+    float bottomThreshold = max(_ES_HeightLerpBottom, 0.001);
+    float bottomFactor = u_xlat75 / bottomThreshold;
+    bottomFactor = clamp(bottomFactor, 0.0, 1.0);
+    
+    // Smooth step for bottom region
+    float bottomSmoothStep = (bottomFactor * -2.0) + 3.0;
+    bottomFactor = bottomFactor * bottomFactor;
+    float bottomBlend = 1.0 - (bottomSmoothStep * bottomFactor);
+    
+    // Top region calculation
+    float topFactor = (u_xlat75 - _ES_HeightLerpTop) * 2.0;
+    topFactor = clamp(topFactor, 0.0, 1.0);
+    
+    // Smooth step for top region
+    float topSmoothStep = (topFactor * -2.0) + 3.0;
+    topFactor = topFactor * topFactor;
+    float topBlend = topFactor * topSmoothStep;
+    
+    // Middle region calculation
+    float middleBlend = 1.0 - bottomBlend;
+    middleBlend = middleBlend - (topSmoothStep * topFactor);
+    middleBlend = clamp(middleBlend, 0.0, 1.0);
+    
+    // Blend the three colors based on height regions
+    float3 bottomColor = bottomBlend * _ES_HeightLerpBottomColor.xyz * _ES_HeightLerpBottomColor.www;
+    float3 middleColor = middleBlend * _ES_HeightLerpMiddleColor.xyz * _ES_HeightLerpMiddleColor.www;
+    float3 topColor = topBlend * _ES_HeightLerpTopColor.xyz * _ES_HeightLerpTopColor.www;
+    
+    // Combine all three color regions
+    float3 finalColor = bottomColor + middleColor + topColor;
+    finalColor = clamp(finalColor, 0.0, 1.0);
+    
+    // Apply to the input color
+    color.xyz = finalColor * color.xyz;
 }
 
 void swirl_dissolve(vs_out i, inout float4 output)
@@ -626,11 +633,15 @@ float4 starry_cloak(float4 sspos, float3 view, float2 uv, float4 position, float
     
     star_density = saturate(star_density / (-_StarDensity  + 1.0f));
 
-    float4 u_xlat6 = spos.xzyz * _SkyStarTex_ST.xyxy + _SkyStarTex_ST.zwzw;
-    float u_xlat16_48 = _SkyStarTex.Sample(sampler_linear_repeat, u_xlat6.xy).x;
-    float u_xlat16_49 = _SkyStarTex.Sample(sampler_linear_repeat, u_xlat6.zw).x;
-
-    float star_blend = lerp(u_xlat16_49, u_xlat16_48, star_tex_yz.y);
+    // Transform position coordinates to star texture UV space
+    float4 starTexCoords = spos.xzyz * _SkyStarTex_ST.xyxy + _SkyStarTex_ST.zwzw;
+    
+    // Sample star texture at two different coordinates
+    float starSample1 = _SkyStarTex.Sample(sampler_linear_repeat, starTexCoords.xy).x;
+    float starSample2 = _SkyStarTex.Sample(sampler_linear_repeat, starTexCoords.zw).x;
+    
+    // Blend between the two star samples based on the Y component of star_tex_yz
+    float star_blend = lerp(starSample2, starSample1, star_tex_yz.y);
 
     float3 stars = star_blend * (star_density * _SkyStarColor) * _SkyStarTexScale;
 
@@ -642,19 +653,29 @@ float4 starry_cloak(float4 sspos, float3 view, float2 uv, float4 position, float
 
     float test = pow(1.0f - tdotv, 4.0f);
 
-    float u_xlat16_53 = _SkyFresnelSmooth + 0.5;
-    float2 u_xlat16_12 = (-float2(_SkyFresnelSmooth, _SkyFresnelBaise)) + float2(0.5, 1.0);
-    float u_xlat16_3 = u_xlat16_12.y * test.x + _SkyFresnelBaise;
-    u_xlat16_53 = u_xlat16_53 + (-u_xlat16_12.x);
-    u_xlat16_3.x = (-u_xlat16_12.x) + u_xlat16_3.x;
-    u_xlat16_53 = float(1.0) / u_xlat16_53;
-    u_xlat16_3.x = u_xlat16_3.x * u_xlat16_53;
-    u_xlat16_3.x = clamp(u_xlat16_3.x, 0.0, 1.0);
-    u_xlat16_53 = u_xlat16_3.x * -2.0 + 3.0;
-    u_xlat16_3.x = u_xlat16_3.x * u_xlat16_3.x;
-    u_xlat16_3.x = u_xlat16_3.x * u_xlat16_53;
-
-    float3 star_fresnel = (u_xlat16_3.xxx * _SkyFresnelScale) * _SkyFresnelColor;
+    // Calculate fresnel effect parameters
+    float halfOffset = 0.5;
+    float fresnelSmoothWithOffset = _SkyFresnelSmooth + halfOffset;
+    
+    // Calculate adjusted ranges for smooth interpolation
+    float2 fresnelRanges = float2(halfOffset, 1.0) - float2(_SkyFresnelSmooth, _SkyFresnelBaise);
+    
+    // Apply test factor (view-tangent dot product) to calculate fresnel intensity
+    float fresnelIntensity = fresnelRanges.y * test + _SkyFresnelBaise;
+    
+    // Calculate normalization factor for smooth interpolation
+    float normalizationFactor = 1.0 / (fresnelSmoothWithOffset - fresnelRanges.x);
+    
+    // Normalize the fresnel intensity for interpolation
+    float normalizedIntensity = (fresnelIntensity - fresnelRanges.x) * normalizationFactor;
+    normalizedIntensity = clamp(normalizedIntensity, 0.0, 1.0);
+    
+    // Apply smoothstep function (t²(3-2t)) for smooth transition
+    float smoothStepFactor = normalizedIntensity * -2.0 + 3.0;
+    float finalFresnel = normalizedIntensity * normalizedIntensity * smoothStepFactor;
+    
+    // Calculate final star fresnel color
+    float3 star_fresnel = (finalFresnel * _SkyFresnelScale) * _SkyFresnelColor;
     
     float3 something = skystar.xyz * mask;
     something = something * skymask.x;
@@ -662,11 +683,7 @@ float4 starry_cloak(float4 sspos, float3 view, float2 uv, float4 position, float
     output.xyz = (stars * skymask.x) * mask + -something;
     output.xyz = _StarMode * output.xyz + something;
     output.xyz = star_fresnel * skymask.y + output.xyz;
-
-    // u_xlat16_7.xyz = u_xlat16_8.xyz * u_xlat16_7.xyz + (-u_xlat16_13.xyz);
-    // u_xlat16_7.xyz = float3(float3(_StarMode, _StarMode, _StarMode)) * u_xlat16_7.xyz + u_xlat16_13.xyz;
-    // u_xlat16_7.xyz = u_xlat16_12.xyz * u_xlat34.yyy + u_xlat16_7.xyz;
-    // u_xlat16_3.xyz = u_xlat16_19.xyz * u_xlat16_5.xyz + u_xlat16_7.xyz;
+    
     if(_StarsAreDiffuse) out_color.xyz = lerp(out_color.xyz, 0.0f, skymask.x);
     output.xyz = output.xyz + out_color.xyz;
 
@@ -678,6 +695,37 @@ float4 starry_cloak(float4 sspos, float3 view, float2 uv, float4 position, float
 float3 DecodeLightProbe( float3 N )
 {
     return ShadeSH9(float4(N,1));
+}
+
+void matcap_color(in float3 normal, in float3 view, in float shadow, in float mask, in float2 uv, inout float specular_int, inout float4 specular_color, inout float3 color)
+{
+    #if defined(use_matcap)
+
+    float2 sphere_uv = mul(normal, (float3x3)UNITY_MATRIX_I_V ).xy;
+        sphere_uv = sphere_uv * 0.5f + 0.5f;  
+
+        float3 cube_uv = reflect(view, normal);
+
+        float4 matcap = (_UseCubeMap) ? _CubeMap.Sample(sampler_linear_repeat, cube_uv) : _MatCapTex.Sample(sampler_linear_repeat, sphere_uv);
+        float matcap_mask = _MatCapMaskTex.Sample(sampler_linear_repeat, uv).x;
+
+        float matcap_area = _OnlyMask ? matcap_mask : mask.x * matcap_mask;
+
+        float matcap_strength = ((saturate(((shadow.x * 5.0) + -4.0)) * (((-_MatCapStrengthInShadow) * _MatCapStrength) + _MatCapStrength)) + (_MatCapStrength * _MatCapStrengthInShadow));
+        float3 matcap_color = (matcap_strength * matcap.xyz); // mask * matcap * matcap_color
+        matcap_color.xyz = (matcap_color.xyz * _MatCapColor.xyz);
+        matcap_color.xyz = (matcap_area * matcap_color.xyz); // * spec color
+        matcap_color.xyz = (specular_color.xyz * matcap_color.xyz); // * spec intensity
+        matcap_color.xyz = (specular_int * matcap_color.xyz);
+
+        float matcap_ceil = ((matcap_mask * mask.x) + -0.0099999998);
+        matcap_ceil = clamp(matcap_ceil, 0.0, 1.0);
+        matcap_ceil = ceil(matcap_ceil);
+
+        matcap.xyz = (matcap_color.xyz * matcap_ceil);
+        if(_ReplaceColor) color = lerp(color, matcap, matcap_area);
+        else color = color * 1 /*this would be the rim shadow*/ + matcap;
+    #endif
 }
 
 bool hide_parts(float2 vcol)
@@ -692,4 +740,60 @@ bool hide_parts(float2 vcol)
     int check3 = (check1) ? ivcol.x : (check2) ? ivcol.y : 1;
 
     return 0 < check3;
+}
+
+void custom_coloring(inout float4 color, in float alpha_tex)
+{
+    // Determine ID based on alpha texture
+    float id = (0.95f < alpha_tex) ? 1.0 : alpha_tex;
+    
+    // Check if ID is less than thresholds
+    float2 thresholds = float2(0.95f, 1.0) > id.xx;
+    
+    // Calculate floor ID for color selection
+    float floor_id = floor(id.x * 8.0);
+    
+    // Initialize variables
+    float4 temp;
+    temp.x = (thresholds.y) ? 0.0 : 1.0;
+    
+    // Start with base color
+    float4 base_color = color.xyzx * temp.xxxx;
+    
+    // Define color pairs for interpolation
+    float4 color_0 = lerp(_CustomColor1.xyzx, _CustomColor0.xyzx, color.xxxx);
+    float4 color_1 = lerp(_CustomColor3.xyzx, _CustomColor2.xyzx, color.xxxx);
+    float4 color_2 = lerp(_CustomColor5.xyzx, _CustomColor4.xyzx, color.xxxx);
+    float4 color_3 = lerp(_CustomColor7.xyzx, _CustomColor6.xyzx, color.xxxx);
+    float4 color_4 = lerp(_CustomColor9.xyzx, _CustomColor8.xyzx, color.xxxx);
+    float4 color_5 = lerp(_CustomColor11.xyzx, _CustomColor10.xyzx, color.xxxx);
+    float4 color_6 = lerp(_CustomColor13.xyzx, _CustomColor12.xyzx, color.xxxx);
+    float4 color_skin = lerp(_CustomSkinColor1.xyzx, _CustomSkinColor.xyzx, color.xxxx);
+    
+    // Check which color set to use based on floor_id (0-3)
+    float4 id_check = float4(0.0, 1.0, 2.0, 3.0) == floor_id.xxxx;
+
+    // Apply skin color if floor_id is 0
+    color_skin = (-color.xyzx) * temp.xxxx + color_skin;
+    base_color = id_check.xxxx * color_skin + base_color;
+    
+    // Apply custom colors based on floor_id (1-3)
+    base_color = lerp(base_color, color_0, id_check.yyyy); 
+    base_color = lerp(base_color, color_1, id_check.zzzz);  
+    base_color = lerp(base_color, color_2, id_check.wwww);  
+    
+    // Check which color set to use based on floor_id (4-7)
+    id_check = float4(4.0, 5.0, 6.0, 7.0) == floor_id.xxxx;
+    
+    // Apply custom colors based on floor_id (4-7)
+    base_color = lerp(base_color, color_3, id_check.xxxx);    
+    base_color = lerp(base_color, color_4, id_check.yyyy);
+    base_color = lerp(base_color, color_5, id_check.zzzz);
+    base_color = lerp(base_color, color_6, id_check.wwww);
+    
+    // Set final color components
+    float original_tex_check = (thresholds.y) ? color.z : float(1.0);
+    
+    // Apply the calculated color
+    color.xyz = lerp(color.xyz, base_color.xyz, original_tex_check);
 }

@@ -79,6 +79,27 @@ Shader "HoyoToon/Star Rail/Character"
                 _Color5("Color 5", Color) = (1.0, 1.0, 1.0, 1.0)
                 _Color6("Color 6", Color) = (1.0, 1.0, 1.0, 1.0)
                 _Color7("Color 7", Color) = (1.0, 1.0, 1.0, 1.0)
+
+                [HideInInspector] start_customcolors("Custom Colors", Float) = 0
+                    [Toggle] _UseCustomColors ("Enable Custom Colors", Float) = 0
+                    _AlphaTex ("ID Texture", 2D) = "white" {}
+                    _CustomSkinColor ("Custom Skin Color (ID = 0)", Color) = (1,1,1,1)
+                    _CustomSkinColor1 ("Custom Skin Color (ID = 0)", Color) = (1,1,1,1)
+                    _CustomColor0 ("Custom Color 1 (ID = 31)", Color) = (1,1,1,1)
+                    _CustomColor1 ("Custom Color 1 (ID = 31)", Color) = (1,1,1,1)
+                    _CustomColor2 ("Custom Color 2 (ID = 63)", Color) = (1,1,1,1)
+                    _CustomColor3 ("Custom Color 2 (ID = 63)", Color) = (1,1,1,1)
+                    _CustomColor4 ("Custom Color 3 (ID = 95)", Color) = (1,1,1,1)
+                    _CustomColor5 ("Custom Color 3 (ID = 95)", Color) = (1,1,1,1)
+                    _CustomColor6 ("Custom Color 4 (ID = 127)", Color) = (1,1,1,1)
+                    _CustomColor7 ("Custom Color 4 (ID = 127)", Color) = (1,1,1,1)
+                    _CustomColor8 ("Custom Color 5 (ID = 159)", Color) = (1,1,1,1)
+                    _CustomColor9 ("Custom Color 5 (ID = 159)", Color) = (1,1,1,1)
+                    _CustomColor10 ("Custom Color 6 (ID = 192)", Color) = (1,1,1,1)
+                    _CustomColor11 ("Custom Color 6 (ID = 192)", Color) = (1,1,1,1)
+                    _CustomColor12 ("Custom Color 7 (ID = 223)", Color) = (1,1,1,1)
+                    _CustomColor13 ("Custom Color 7 (ID = 223)", Color) = (1,1,1,1)
+                [HideInInspector] end_customcolors ("", Float) = 0
                 //_EnvColor ("Env Color", Color) = (1, 1, 1, 1)
                 //_AddColor ("Add Color", Color) = (0, 0, 0, 0)
             [HideInInspector] end_maincolor ("", Float) = 0
@@ -303,6 +324,22 @@ Shader "HoyoToon/Star Rail/Character"
             [HideInInspector] end_specularintensity("", Float) = 0
         [HideInInspector] end_specular("", Float) = 0
         //endex
+        
+        // ifex _EnableMatcap == 0
+        [HideInInspector] start_matcap("Matcap--{reference_property:_UseMatcap}", Float) = 0
+            [Toggle] _UseMatcap ("Use Matcap", Float) = 0
+            [Toggle] _ReplaceColor ("Use Matcap as Diffuse Color", Float) = 0
+            [Toggle] _UseCubeMap ("Use Cube Map", Float) = 0
+            [Toggle] _OnlyMask ("Only Use Mask", Float) = 0
+            _MatCapMaskTex ("Matcap Mask Texture", 2D) = "white" {}
+            _CubeMap ("Cube Map--{condition_show:{type:PROPERTY_BOOL,data:_UseCubeMap==1.0}}", Cube) = "black" {}
+            _MatCapTex ("Matcap Texture--{condition_show:{type:PROPERTY_BOOL,data:_UseCubeMap==0.0}}", 2D) = "black" {}
+            _MatCapStrength ("Matcap Strength", Range(0, 100)) = 1
+            _MatCapStrengthInShadow ("Matcap Strength In Shadow", Range(0, 100)) = 1
+            _MatCapColor ("Matcap Color", Color) = (1, 1, 1, 1)
+        [HideInInspector] end_matcap("", Float) = 0
+        //endif
+        
 
         //ifex _EnableStocking == 0
         [HideInInspector] start_stockings("Stockings--{reference_property:_EnableStocking}", Float) = 0
@@ -652,6 +689,9 @@ Shader "HoyoToon/Star Rail/Character"
         //endex
         //ifex _DissoveON == 0
         #define can_dissolve
+        //endex
+        // ifex _EnableMatcap == 0
+        #define use_matcap
         //endex
         //ifex _DebugMode == 0
         #define debug_mode
