@@ -36,7 +36,6 @@ void ditherClip(float2 pos, float alpha)
     clip(isDithered(pos, alpha));
 }
 
-
 // from: https://github.com/cnlohr/shadertrixx/blob/main/README.md#best-practice-for-getting-depth-of-a-given-pixel-from-the-depth-texture
 float GetLinearZFromZDepth_WorksWithMirrors(float zDepthFromMap, float2 screenUV)
 {
@@ -60,18 +59,33 @@ float3 DecodeLightProbe( float3 N )
 
 float4 maintint(float4 diffuse)
 {
-    float4 screen = diffuse;
-    float4 u_xlat16_4 = screen * _MainTexTintColor;
-    float4 u_xlat16_5 = u_xlat16_4 + u_xlat16_4;
-    float4 u_xlat16_6 = screen + _MainTexTintColor;
-    u_xlat16_6.xyz = u_xlat16_6.xyz + u_xlat16_6.xyz;
-    u_xlat16_4.xyz = u_xlat16_4.xyz * float3(-4.0, -4.0, -4.0) + u_xlat16_6.xyz;
-    u_xlat16_6.x = (0.5f < screen.x) ? float(1.0) : float(0.0);
-    u_xlat16_6.y = (0.5f < screen.y) ? float(1.0) : float(0.0);
-    u_xlat16_6.z = (0.5f < screen.z) ? float(1.0) : float(0.0);
-    u_xlat16_4.xyz = u_xlat16_4.xyz + float3(-1.0, -1.0, -1.0);
-    u_xlat16_4.xyz = u_xlat16_6.xyz * u_xlat16_4.xyz + u_xlat16_5.xyz;
-    return u_xlat16_4;
+    // Store the input diffuse color
+    float4 diffuseColor = diffuse;
+    
+    // Calculate base tinted color
+    float4 tintedColor = diffuseColor * _MainTexTintColor;
+    float4 doubleTintedColor = tintedColor * 2.0;
+    
+    // Calculate combined color components
+    float4 combinedColor = diffuseColor + _MainTexTintColor;
+    combinedColor.xyz *= 2.0;
+    
+    // Apply color transformation
+    float3 transformedColor = (tintedColor.xyz * -4.0) + combinedColor.xyz;
+    
+    // Create threshold mask for each color channel (1.0 if > 0.5, otherwise 0.0)
+    float3 thresholdMask;
+    thresholdMask.x = (0.5f < diffuseColor.x) ? 1.0 : 0.0;
+    thresholdMask.y = (0.5f < diffuseColor.y) ? 1.0 : 0.0;
+    thresholdMask.z = (0.5f < diffuseColor.z) ? 1.0 : 0.0;
+    
+    // Apply final color adjustments
+    transformedColor = transformedColor + float3(-1.0, -1.0, -1.0);
+    float3 finalColor = thresholdMask * transformedColor + doubleTintedColor.xyz;
+    
+    // Return final color with original alpha
+    float4 result = float4(finalColor, tintedColor.a);
+    return result;
 }
 
 float get_index(float material_id)
@@ -117,7 +131,6 @@ float packed_channel_picker(SamplerState texture_sampler, Texture2D texture_2D, 
 
     return choice;
 }
-
 
 float3 hue_shift(float3 in_color, float material_id, float shift1, float shift2, float shift3, float shift4, float shift5, float shiftglobal, float autobool, float autospeed, float mask)
 {   
@@ -1261,90 +1274,6 @@ void arm_effect(inout float4 diffuse, float2 uv0, float2 uv1, float2 uv2, float3
         grad_alpha.x = exp2(grad_alpha.x);
         grad_alpha.x = grad_alpha.x * _GradientScale;
         diffuse.w = saturate(grad_alpha.x * effmul.x);
-
-        // above is old code
-        // below is new code
-        
-        // float3 mask_uv;
-        // mask_uv.xy = uv.xy * _Mask_ST.xy + _Mask_ST.zw;
-        // mask_uv.xy = mask_uv.xy + float2(0.0f, _Time.y * _Mask_Speed_U);
-        // float3 mask_tex = _Mask.Sample(sampler_LightMapTex, mask_uv.xy);
-        // float4 tex_uv;
-        // tex_uv.xy = uv.xy * _Tex01_UV.xy + _Tex01_UV.zw;
-        // tex_uv.xy = _Time.yy * float2(_Tex01_Speed_U, _Tex01_Speed_V) + tex_uv.xy;
-        // float3 tex01 = _MainTex.Sample(sampler_MainTex, tex_uv).xyw;
-        // float2 tex2_uv = uv.xy * _Tex02_UV.xy + _Tex02_UV.zw;
-        // tex2_uv.xy = _Time.yy * float2(_Tex02_Speed_U, _Tex02_Speed_V) + tex2_uv.xy;
-        // float3 tex02 = _MainTex.Sample(sampler_MainTex, tex2_uv.xy).xyw;
-        // float4 maxy; 
-        // maxy.x = max(tex01.y, tex02.y);
-        // float2 tex3_uv = uv.xy * _Tex03_UV.xy + _Tex03_UV.zw;
-        // tex3_uv = _Time.yy * float2(_Tex03_Speed_U, _Tex03_Speed_V) + tex3_uv;
-        // float3 tex03 = _MainTex.Sample(sampler_MainTex, tex3_uv).xyw;
-        // maxy.x = max(maxy.x, tex03.y);
-        // float2 tex_masked = mask_tex.xz * tex03.zx;
-        // maxy.x = max(mask_tex.y, maxy.x);
-        // tex_masked.xy = tex01.zx * tex02.zx + tex_masked.xy;
-        // maxy.x = (-tex_masked.y) + maxy.x;
-
-        // bool bool_a = uv0.x>=_DownMaskRange;
-
-        // float4 bool_a_check = (bool_a) ? 1.0 : 0.0;
-        // tex_masked.x = bool_a_check * tex_masked.x;
-        // mask_uv.xy = uv.xy * _Tex04_UV.xy + _Tex04_UV.zw;
-        // mask_uv.xy = _Time.yy * float2(_Tex04_Speed_U, _Tex04_Speed_V) + mask_uv.xy;
-        // mask_tex.x = _MainTex.Sample(sampler_MainTex, mask_uv.xy).z;
-        // float2 tex5_uv = uv.xy * _Tex05_UV.xy + _Tex05_UV.zw;
-        // tex5_uv.xy = _Time.yy * float2(_Tex05_Speed_U, _Tex05_Speed_V) + tex5_uv.xy;
-        // float tex05 = _MainTex.Sample(sampler_MainTex, tex5_uv.xy).z;
-        // mask_uv.x = tex05 * mask_tex.x;
-
-        // bool bool_b = mask_uv.x>=_TopMaskRange;
-        // bool_a = mask_uv.x>=_TopLineRange;
-
-        // bool_a_check = (bool_a) ? -1.0 : -0.0;
-        // float4 bool_b_check = (bool_b) ? 1.0 : 0.0;
-        // tex_masked.x = bool_b_check * tex_masked.x;
-        // bool_a_check = bool_a_check + bool_b_check;
-        // bool_a_check = tex_masked.x * bool_a_check;
-        // maxy.x = max(bool_a_check, maxy.x);
-
-        // maxy.x = clamp(maxy.x, 0.0, 1.0);
-
-        // float3 line_color = _LineColor.xyz + (-_LightColor.xyz);
-        // line_color.xyz = maxy.xxx * line_color.xyz + _LightColor.xyz;
-        // float3 line_comb = (-_ShadowColor.xyz) + _LineColor.xyz;
-        // float4 line_shadow;
-        // line_shadow.xzw = maxy.xxx * line_comb.xyz + _ShadowColor.xyz;
-        // line_color.xyz = (-line_shadow.xzw) + line_color.xyz;
-        // mask_uv.xyz = (-view.xyz) * _WorldSpaceLightPos0.www + _WorldSpaceLightPos0.xyz;
-        // mask_uv.x = dot(mask_uv.xyz, normal.xyz);
-        // float shadow_area = mask_uv.x * 0.5 + 0.5;
-        // shadow_area = (-shadow_area) + 1.0;
-
-        // bool_a = _ShadowWidth>=shadow_area;
-
-        // shadow_area = (bool_a) ? 1.0 : 0.0;
-        // line_shadow.xzw = (float3)shadow_area * line_color.xyz + line_shadow.xzw;
-        // mask_uv.xyz = normalize(normal);
-        // tex_uv.xyz = normalize(view);
-        // mask_uv.x = dot(tex_uv.xyz, mask_uv.xyz);
-        // float ndotv_b = (-mask_uv.x) + 1.0;
-        // ndotv_b.x = max(ndotv_b.x, 9.99999975e-05);
-        // ndotv_b.x = log2(ndotv_b.x);
-        // ndotv_b.x = ndotv_b.x * _FresnelPower;
-        // ndotv_b.x = exp2(ndotv_b.x);
-        // ndotv_b.x = ndotv_b.x + _FresnelScale;
-
-        // ndotv_b.x = clamp(ndotv_b.x, 0.0, 1.0);
-        // diffuse.xyz = _FresnelColor.xyz * ndotv_b.xxx + line_shadow.xzw;
-        // float grad_alpha = max(uv.y, 9.99999975e-05);
-        // grad_alpha.x = log2(grad_alpha.x);
-        // grad_alpha.x = grad_alpha.x * _GradientPower;
-        // grad_alpha.x = exp2(grad_alpha.x);
-        // grad_alpha.x = grad_alpha.x * _GradientScale;
-        // diffuse.w = saturate(grad_alpha.x * tex_masked.x);
-
         clip(saturate(1.0f - (uv.y > 0.995f)) - 0.1f );
     #endif 
 }
@@ -1378,50 +1307,58 @@ void mavuika_vat_ps(inout float4 diffuse, in float4 uv, in float3 normal, in flo
     #if defined(use_vat)
         if(_EnableHairVertexVat)
         {
-            // set up uvs
-            float2 noise_uv = _Time.yy * float2(_VertTexUS, _VertTexVS) + (uv.zw * _VertTexST.xy + _VertTexST.zw);
+            // Set up texture coordinates
+            float2 noise_uv = uv.zw * _VertTexST.xy + _VertTexST.zw;
+            noise_uv += _Time.yy * float2(_VertTexUS, _VertTexVS);
+            
             float2 lerp_uv = uv.xy * _LerpTextureST.xy + _LerpTextureST.zw;
-            // sample noise texture
+            
+            // Sample noise texture and select channel based on switch value
             float4 noise = _VertTex.Sample(sampler_linear_repeat, noise_uv).xyzw;
             float shift = 0.0f;
-            shift.x = _VertTexSwitch == 3 ? noise.w : shift;
-            shift.x = _VertTexSwitch == 2 ? noise.z : shift;
-            shift.x = _VertTexSwitch == 1 ? noise.y : shift;
-            shift.x = _VertTexSwitch == 0 ? noise.x : shift;
-            shift.x = (((shift + _VertAdd) * _VertPower)  * vcol.x) * saturate(vcol.z + _VertMask); 
-            // offset uv for blending texture using noise texture
-            lerp_uv = _NoisePowerForLerpTex.xx * shift.xx + lerp_uv.xy;
-            // sample blend texture
-            float3 blend_tex = _LerpTexture.Sample(sampler_linear_repeat, lerp_uv).xyz;
-            float3 color = lerp(_DarkColor, _LightColor, blend_tex.yyy);
-            float highlights = sin(_Time.y * _HighlightsSpeed) * _HighlightsBrightness + 1.0f;
-
-            float ndotv = dot(normal, view);
-            ndotv.x = -ndotv.x + 1.0f;
-            ndotv = max(ndotv, 0.000001f);
-            ndotv = pow(ndotv, 2.3199f);
-            ndotv = ndotv * 1.399f + 0.3f;
-            ndotv = blend_tex.z * ndotv;
-
-            float4 u_xlat16_6;
-            float4 u_xlat16_5;
-            float4 u_xlat16_0;
-            float4 u_xlat16_1;
             
-            u_xlat16_6.xyz = _HighlightsColor.xyz * highlights + (-color.xyz);
-            u_xlat16_5.xyz = ndotv * u_xlat16_6.xyz + color.xyz;
-            u_xlat16_6.xyz = _AhomoColor.xyz * highlights + (-u_xlat16_5.xyz);
-            u_xlat16_5.xyz = blend_tex.xxx * u_xlat16_6.xyz + u_xlat16_5.xyz;
-            u_xlat16_5.xyz = u_xlat16_5.xyz * _AllColorBrightness.xyz;
-            u_xlat16_0.xyz = u_xlat16_5.xyz * _DayColor.xyz;
-            u_xlat16_5.x = max(u_xlat16_0.z, u_xlat16_0.y);
-            u_xlat16_1.w = max(u_xlat16_0.x, u_xlat16_5.x);
-
-            u_xlat16_1.xyz = u_xlat16_0.xyz / u_xlat16_1.www;
-            u_xlat16_0.w = 1.0;
-            u_xlat16_0 = (1.0<u_xlat16_1.w) ? u_xlat16_1 : u_xlat16_0;
-
-            diffuse = u_xlat16_0;
+            if (_VertTexSwitch == 0) shift = noise.x;
+            else if (_VertTexSwitch == 1) shift = noise.y;
+            else if (_VertTexSwitch == 2) shift = noise.z;
+            else if (_VertTexSwitch == 3) shift = noise.w;
+            
+            // Calculate final shift value with vertex color masking
+            float vertexMask = saturate(vcol.z + _VertMask);
+            shift = (shift + _VertAdd) * _VertPower * vcol.x * vertexMask;
+            
+            // Apply noise to lerp texture coordinates
+            lerp_uv += _NoisePowerForLerpTex * shift;
+            
+            // Sample blend texture
+            float3 blend_tex = _LerpTexture.Sample(sampler_linear_repeat, lerp_uv).xyz;
+            
+            // Calculate base color by lerping between dark and light colors
+            float3 color = lerp(_DarkColor, _LightColor, blend_tex.y);
+            
+            // Calculate time-based highlight factor
+            float highlights = sin(_Time.y * _HighlightsSpeed) * _HighlightsBrightness + 1.0f;
+            
+            // Calculate view-based factor for rim lighting
+            float ndotv = dot(normal, view);
+            ndotv = 1.0f - ndotv;  // Invert for rim effect
+            ndotv = max(ndotv, 0.000001f);  // Prevent negative values
+            ndotv = pow(ndotv, 2.3199f) * 1.399f + 0.3f;  // Apply power and scale
+            ndotv *= blend_tex.z;  // Mask with blend texture
+            
+            // Apply highlights and color blending
+            float3 highlightedColor = color + (ndotv * (_HighlightsColor.xyz * highlights - color));
+            float3 finalColor = blend_tex.x * (_AhomoColor.xyz * highlights - highlightedColor) + highlightedColor;
+            
+            // Apply brightness and day color adjustments
+            finalColor *= _AllColorBrightness.xyz * _DayColor.xyz;
+            
+            // Handle HDR color correction
+            float maxChannel = max(max(finalColor.r, finalColor.g), finalColor.b);
+            float4 normalizedColor = float4(finalColor / maxChannel, 1.0);
+            float4 outputColor = float4(finalColor, 1.0);
+            
+            // If max channel is > 1, use normalized color to preserve hue
+            diffuse = (maxChannel > 1.0) ? normalizedColor : outputColor;
         }
     #endif   
 }

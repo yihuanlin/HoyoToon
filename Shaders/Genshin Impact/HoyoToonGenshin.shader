@@ -330,34 +330,34 @@ Shader "HoyoToon/Genshin/Character"
             //endex
             // Leather 
             //ifex _UseCharacterLeather == 0
-            [HideInInspector] start_leather("Leather--{reference_property:_UseCharacterLeather}", Float) = 0
-                [Toggle] _UseCharacterLeather("Enable Leather", Float) = 0
-                _LeatherSpecularColor ("Leather Specular Color", Color) = (1,1,1,1)
-                [HideInInspector] start_laser ("Holographic", Float) = 0
-                    _LeatherLaserRamp ("Holographic Ramp", 2D) = "grey" { }
-                    _LeatherLaserTiling ("Tiling", Range(1, 6)) = 1
-                    _LeatherLaserOffset ("Offset", Range(0, 2)) = 0
-                    _LeatherLaserScale ("Scale", Range(0, 1)) = 0.5
-                [HideInInspector] end_laser ("", Float) = 0
-                [HideInInspector] start_reflmap ("Leather Reflection Matcap", Float) = 0
-                    _LeatherReflect ("Leather Reflection Matcap--{condition_show:{type:PROPERTY_BOOL,data:_UseCharacterLeather==1.0}}", 2D) = "black" {}
-                    _LeatherReflectBlur ("Leather Reflection Blur", Float) = 1
-                    _LeatherReflectOffset ("Leather Reflection Offset", Float) = 0 
-                    _LeatherReflectScale ("Leather Reflection Scale", Float) = 1
-                [HideInInspector] end_reflmap ("", Float) = 0
-                [HideInInspector] start_leaspec ("Specular", Float) = 0
-                    _LeatherSpecularShift ("Leather Specualr Shift", Range(-1, 1)) = -0.5
-                    _LeatherSpecularRange ("Leather Specualr Range", Range(1, 200)) = 50
-                    _LeatherSpecularScale ("Leather Specualr Scale", Range(0, 1)) = 0
-                    _LeatherSpecularSharpe ("Leather Specualr Sharpe", Range(0.501, 1)) = 1
-                [HideInInspector] end_leaspec ("Specular", Float) = 0
-                [HideInInspector] start_leatherdetail ("Detail", Float) = 0
-                    _LeatherSpecularDetailColor ("Leather DetailSpecular Color", Color) = (1,1,1,1)
-                    _LeatherSpecularDetailRange ("Leather DetailSpecular Range", Range(1, 200)) = 50
-                    _LeatherSpecularDetailScale ("Leather DetailSpecular Scale", Range(0, 1)) = 0
-                    _LeatherSpecularDetailSharpe ("Leather Specualr Sharpe", Range(0.501, 1)) = 1
-                [HideInInspector] end_leatherdetail ("Detail", Float) = 0
-            [HideInInspector] end_leather("", Float) = 0
+                [HideInInspector] start_leather("Leather--{reference_property:_UseCharacterLeather}", Float) = 0
+                    [Toggle] _UseCharacterLeather("Enable Leather", Float) = 0
+                    _LeatherSpecularColor ("Leather Specular Color", Color) = (1,1,1,1)
+                    [HideInInspector] start_laser ("Holographic", Float) = 0
+                        _LeatherLaserRamp ("Holographic Ramp", 2D) = "grey" { }
+                        _LeatherLaserTiling ("Tiling", Range(1, 6)) = 1
+                        _LeatherLaserOffset ("Offset", Range(0, 2)) = 0
+                        _LeatherLaserScale ("Scale", Range(0, 1)) = 0.5
+                    [HideInInspector] end_laser ("", Float) = 0
+                    [HideInInspector] start_reflmap ("Leather Reflection Matcap", Float) = 0
+                        _LeatherReflect ("Leather Reflection Matcap--{condition_show:{type:PROPERTY_BOOL,data:_UseCharacterLeather==1.0}}", 2D) = "black" {}
+                        _LeatherReflectBlur ("Leather Reflection Blur", Float) = 1
+                        _LeatherReflectOffset ("Leather Reflection Offset", Float) = 0 
+                        _LeatherReflectScale ("Leather Reflection Scale", Float) = 1
+                    [HideInInspector] end_reflmap ("", Float) = 0
+                    [HideInInspector] start_leaspec ("Specular", Float) = 0
+                        _LeatherSpecularShift ("Leather Specualr Shift", Range(-1, 1)) = -0.5
+                        _LeatherSpecularRange ("Leather Specualr Range", Range(1, 200)) = 50
+                        _LeatherSpecularScale ("Leather Specualr Scale", Range(0, 1)) = 0
+                        _LeatherSpecularSharpe ("Leather Specualr Sharpe", Range(0.501, 1)) = 1
+                    [HideInInspector] end_leaspec ("Specular", Float) = 0
+                    [HideInInspector] start_leatherdetail ("Detail", Float) = 0
+                        _LeatherSpecularDetailColor ("Leather DetailSpecular Color", Color) = (1,1,1,1)
+                        _LeatherSpecularDetailRange ("Leather DetailSpecular Range", Range(1, 200)) = 50
+                        _LeatherSpecularDetailScale ("Leather DetailSpecular Scale", Range(0, 1)) = 0
+                        _LeatherSpecularDetailSharpe ("Leather Specualr Sharpe", Range(0.501, 1)) = 1
+                    [HideInInspector] end_leatherdetail ("Detail", Float) = 0
+                [HideInInspector] end_leather("", Float) = 0
             //endex
 
         // this can be worked on later, my marriage is more important
@@ -787,8 +787,6 @@ Shader "HoyoToon/Genshin/Character"
                         [IntRange] _StencilRefNyx ("Stencil Reference Value", Range(0, 255)) = 0
                     [HideInInspector] end_nyxstencilsetting ("", Float) = 0
                 [HideInInspector] end_nyxoutline ("", Float) = 0
-                
-
             [HideInInspector] end_nyx("NightSoul", Float) = 0
             // Mavuika VAT
             //ifex _VertexAnimType == 0

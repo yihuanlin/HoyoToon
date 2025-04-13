@@ -7,172 +7,208 @@ vs_out vs_model(vs_in v)
     UNITY_INITIALIZE_OUTPUT(vs_out, o); 
     UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(o); 
     #if defined(use_vat)
-    if(_VertexAnimType == 1)
-    {
-        mavuika_vat_vs(v.vertex, v.uv_1.xy, v.normal, v.v_col);
-    }
-    else if (_VertexAnimType == 2)
-    {
-        o.pos = v.vertex;
-
-        float4 pos_ws  = mul(unity_ObjectToWorld, v.vertex);
-        float4 pos_wvp = mul(UNITY_MATRIX_VP, pos_ws);
-        o.pos = pos_wvp;
-
-        float check_a = v.v_col.w == 0 || v.v_col.w == 1;
-        check_a = (_DisappearByVerColAlpha) ? check_a : 0.0f;
-
-
-        if(check_a)
+        if(_VertexAnimType == 1)
         {
-            o = (vs_out)0.0f;
+            mavuika_vat_vs(v.vertex, v.uv_1.xy, v.normal, v.v_col);
+        }
+        else if (_VertexAnimType == 2)
+        {
+            o.pos = v.vertex;
+
+            // Transform vertex from object to world space, then to clip space
+            float4 worldSpacePosition = mul(unity_ObjectToWorld, v.vertex);
+            float4 clipSpacePosition = mul(UNITY_MATRIX_VP, worldSpacePosition);
+            o.pos = clipSpacePosition;
+
+            // Check if vertex should be hidden based on vertex color alpha
+            bool shouldHideVertex = v.v_col.w == 0 || v.v_col.w == 1;
+            shouldHideVertex = (_DisappearByVerColAlpha) ? shouldHideVertex : false;
+
+            // Early return if vertex should be hidden
+            if(shouldHideVertex)
+            {
+                o = (vs_out)0.0f;
+                return o;
+            }
+
+            // Declare variables for vertex animation
+            float4 vertexColor;
+            float3 texCoord0;
+            float3 texCoord1;
+            float3 texCoord2;
+            float4 texCoord3;
+            float4 texCoord4;
+            float4 tempVec0;
+            uint4 tempUintVec0;
+            bool2 tempBoolVec0;
+            float4 tempVec1;
+            float4 tempVec2;
+            float3 normalizedTangent;
+            float3 normalizedBitangent;
+            float3 normalizedNormal;
+            float3 tempVec4;
+            uint3 tempUintVec4;
+            float3 boundMin;
+            float3 boundSize;
+            float3 positionA;
+            float3 positionB;
+            bool isAutoPlayback;
+            float2 frameUV;
+            float currentFrameNormalized;
+            bool isPositiveFrame;
+            float frameTime;
+            bool isNextFrameZero;
+            float normalLength;
+            float tangentLength;
+
+            // Calculate vertical UV coordinate
+            float verticalUV = (-v.uv_1.y) + 1.0;
+
+            // Check if auto playback is enabled
+            isAutoPlayback = 9.99999975e-06 < _IfAutoPlayback;
+
+            // Calculate animation timing
+            frameTime = _Time.y * _Speed;
+            frameTime = frameTime * _HoudiniFPS;
+            frameTime = frameTime / _FrameCount;
+            frameTime = frac(frameTime);
+            
+            float frameIndex = frameTime * _FrameCount;
+            float frameFraction = frac(frameIndex);
+            frameIndex = floor(frameIndex);
+            frameIndex = frameIndex / _FrameCount;
+
+            // Handle negative frame indices
+            isPositiveFrame = frameIndex >= (-frameIndex);
+            frameIndex = frac(abs(frameIndex));
+            frameUV.y = (isPositiveFrame) ? frameIndex : (-frameIndex);
+            
+            // Calculate next frame
+            float nextFrameIndex = frameTime * _FrameCount + 1.0;
+            nextFrameIndex = floor(nextFrameIndex);
+            nextFrameIndex = nextFrameIndex / _FrameCount;
+
+            isPositiveFrame = nextFrameIndex >= (-nextFrameIndex);
+            nextFrameIndex = frac(abs(nextFrameIndex));
+            frameUV.x = (isPositiveFrame) ? nextFrameIndex : (-nextFrameIndex);
+            
+            // Scale frame coordinates
+            frameUV.xy = frameUV.xy * float2(_FrameCount, _FrameCount);
+
+            // Check if next frame is zero
+            isNextFrameZero = abs(frameUV.x) < 9.99999975e-06;
+
+            // Prepare animation parameters
+            tempVec1.z = (isNextFrameZero) ? 0.0 : frameFraction;
+            frameUV.xy = frameUV.xy / float2(_FrameCount, _FrameCount);
+            frameUV.xy = verticalUV + frameUV.xy;
+            tempVec1.xy = (-frameUV.yx) + float2(1.0, 1.0);
+            
+            // Handle manual frame selection
+            float manualFrameIndex = floor(_CurrentFrame);
+            float prevManualFrameIndex = manualFrameIndex - 1.0;
+            frameUV.xy = float2(manualFrameIndex, prevManualFrameIndex) / float2(_FrameCount, _FrameCount);
+
+            isPositiveFrame = frameUV.y >= (-frameUV.y);
+            frameIndex = frac(abs(frameUV.y));
+            frameUV.y = (isPositiveFrame) ? frameIndex : (-frameIndex);
+
+            isPositiveFrame = frameUV.x >= (-frameUV.x);
+            frameIndex = frac(abs(frameUV.x));
+            frameUV.x = (isPositiveFrame) ? frameIndex : (-frameIndex);
+            
+            frameUV.xy = frameUV.xy * float2(_FrameCount, _FrameCount);
+            frameUV.xy = frameUV.xy / float2(_FrameCount, _FrameCount);
+            
+            tempVec0.w = verticalUV + frameUV.y;
+            tempVec0.x = verticalUV + frameUV.x;
+            tempVec2.xy = (-tempVec0.wx) + float2(1.0, 1.0);
+            tempVec2.z = frac(_CurrentFrame);
+            
+            // Select animation parameters based on playback mode
+            tempVec0.xyz = (isAutoPlayback) ? tempVec1.xyz : tempVec2.xyz;
+            
+            // Normalize vertex normal
+            normalLength = dot(v.normal.xyz, v.normal.xyz);
+            normalLength = rsqrt(normalLength);
+            normalizedNormal = normalLength * v.normal.xyz;
+            
+            // Normalize vertex tangent
+            tangentLength = dot(v.tangent.xyz, v.tangent.xyz);
+            tangentLength = rsqrt(tangentLength);
+            normalizedTangent = tangentLength * v.tangent.xyz;
+            
+            // Calculate bitangent
+            normalizedBitangent = cross(normalizedNormal, normalizedTangent);
+            
+            // Sample position texture
+            tempVec0.w = v.uv_1.x;
+            float3 sampledPosition = _PosTex_A.SampleLevel(sampler_linear_repeat, tempVec0.wx, 0).xyz;
+            
+            // Decode position data
+            float3 decodedPosition = sampledPosition * float3(255.0, 255.0, 255.0);
+            tempUintVec4.xyz = uint3(decodedPosition);
+            tempUintVec4.xyz = (uint3)tempUintVec4.xyz << int3(8, 8, 8);
+            tempVec4.xyz = uint3(tempUintVec4.xyz);
+            tempVec4.xyz = tempVec4.xyz * float3(1.52590219e-05, 1.52590219e-05, 1.52590219e-05);
+            
+            // Calculate position within bounds
+            boundMin.x = _BoundMinX;
+            boundMin.yz = float2(_BoundMinY, _BoundMinZ);
+            boundSize.xyz = float3(_BoundMaxX, _BoundMaxY, _BoundMaxZ) - boundMin.xyz;
+            positionA.xyz = tempVec4.xyz * boundSize.xyz + boundMin.xyz;
+
+            // Handle interframe interpolation if enabled
+            if(_IfInterframeInterp) {
+                float3 nextFramePosition = _PosTex_A.SampleLevel(sampler_linear_repeat, tempVec0.wy, 0).xyz;
+                float3 decodedNextPosition = nextFramePosition * float3(255.0, 255.0, 255.0);
+                tempUintVec0.xyw = uint3(decodedNextPosition);
+                tempUintVec0.xyw = (uint3)tempUintVec0.xyw << int3(8, 8, 8);
+                tempVec0.xyw = uint3(tempUintVec0.xyw);
+                tempVec0.xyw = tempVec0.xyw * float3(1.52590219e-05, 1.52590219e-05, 1.52590219e-05);
+                
+                positionB.xyz = tempVec0.xyw * boundSize.xyz + boundMin.xyz;
+                float3 positionDelta = positionB.xyz - positionA.xyz;
+                tempVec0.xyz = positionDelta * tempVec0.zzz + positionA.xyz;
+            } else {
+                tempVec0.xyz = positionA.xyz;
+            }
+            
+            // Calculate final vertex position
+            float3 tangentOffset = normalizedBitangent * tempVec0.yyy;
+            float3 combinedOffset = tempVec0.xxx * normalizedTangent + tangentOffset;
+            float3 finalOffset = tempVec0.zzz * normalizedNormal + combinedOffset;
+            float3 finalPosition = finalOffset + v.vertex.xyz;
+            
+            // Transform to clip space
+            o.pos = UnityObjectToClipPos(finalPosition);
+            
+            // Calculate world space normal
+            float3 worldNormal;
+            worldNormal.x = dot(v.normal.xyz, unity_WorldToObject[0].xyz);
+            worldNormal.y = dot(v.normal.xyz, unity_WorldToObject[1].xyz);
+            worldNormal.z = dot(v.normal.xyz, unity_WorldToObject[2].xyz);
+            
+            
+            o.normal.xyz = normalize(worldNormal);
+            
+            // Calculate view direction
+            float3 worldPosition = unity_ObjectToWorld[3].xyz * v.vertex.www + finalPosition;
+            float3 viewDirection = _WorldSpaceCameraPos.xyz - worldPosition;
+            o.view = normalize(viewDirection);
+            
+            // Calculate screen position
+            float2 screenPos = o.pos.xw * float2(0.5, 0.5);
+            float projectionY = o.pos.y * _ProjectionParams.x;
+            float2 projectionPos = float2(screenPos.x, projectionY * 0.5);
+            texCoord4.xy = o.pos.zz + projectionPos;
+            
+            // Set output values
+            o.v_col = v.v_col;
+            o.uv_a = v.uv_0.xyxy;
+            o.ss_pos = ComputeScreenPos(o.pos);
             return o;
         }
-        float4 vs_COLOR0;
-        float3 vs_TEXCOORD0;
-        float3 vs_TEXCOORD1;
-        float3 vs_TEXCOORD2;
-        float4 vs_TEXCOORD3;
-        float4 vs_TEXCOORD4;
-        float4 u_xlat0;
-        uint4 u_xlatu0;
-        float2 u_xlatb0;
-        float4 u_xlat1;
-        float4 u_xlat2;
-        float3 u_xlat16_3;
-        float3 u_xlat4;
-        uint3 u_xlatu4;
-        float3 u_xlat16_5;
-        float3 u_xlat16_6;
-        float3 u_xlat16_7;
-        float3 u_xlat16_8;
-        bool u_xlatb9;
-        bool u_xlatb10;
-        float2 u_xlat18;
-        float u_xlat27;
-        float u_xlat28;
-        bool u_xlatb28;
-
-        u_xlat0.x = (-v.uv_1.y) + 1.0;
-
-        u_xlatb9 = 9.99999975e-06<_IfAutoPlayback;
-
-        u_xlat18.x = _Time.y * _Speed;
-        u_xlat18.x = u_xlat18.x * _HoudiniFPS;
-        u_xlat18.x = u_xlat18.x / _FrameCount;
-        u_xlat18.x = frac(u_xlat18.x);
-        u_xlat27 = u_xlat18.x * _FrameCount;
-        u_xlat1.x = frac(u_xlat27);
-        u_xlat27 = floor(u_xlat27);
-        u_xlat27 = u_xlat27 / _FrameCount;
-
-        u_xlatb10 = u_xlat27>=(-u_xlat27);
-
-        u_xlat27 = frac(abs(u_xlat27));
-        u_xlat18.y = (u_xlatb10) ? u_xlat27 : (-u_xlat27);
-        u_xlat18.x = u_xlat18.x * _FrameCount + 1.0;
-        u_xlat18.x = floor(u_xlat18.x);
-        u_xlat18.x = u_xlat18.x / _FrameCount;
-
-        u_xlatb10 = u_xlat18.x>=(-u_xlat18.x);
-
-        u_xlat18.x = frac(abs(u_xlat18.x));
-        u_xlat18.x = (u_xlatb10) ? u_xlat18.x : (-u_xlat18.x);
-        u_xlat18.xy = u_xlat18.xy * float2(float2(_FrameCount, _FrameCount));
-
-        u_xlatb10 = abs(u_xlat18.x)<9.99999975e-06;
-
-        u_xlat1.z = (u_xlatb10) ? 0.0 : u_xlat1.x;
-        u_xlat18.xy = u_xlat18.xy / float2(_FrameCount, _FrameCount);
-        u_xlat18.xy = u_xlat0.xx + u_xlat18.xy;
-        u_xlat1.xy = (-u_xlat18.yx) + float2(1.0, 1.0);
-        u_xlat18.x = floor(_CurrentFrame);
-        u_xlat18.y = u_xlat18.x + -1.0;
-        u_xlat18.xy = u_xlat18.xy / float2(_FrameCount, _FrameCount);
-
-        u_xlatb28 = u_xlat18.y>=(-u_xlat18.y);
-
-        u_xlat27 = frac(abs(u_xlat18.y));
-        u_xlat18.y = (u_xlatb28) ? u_xlat27 : (-u_xlat27);
-
-        u_xlatb28 = u_xlat18.x>=(-u_xlat18.x);
-
-        u_xlat18.x = frac(abs(u_xlat18.x));
-        u_xlat18.x = (u_xlatb28) ? u_xlat18.x : (-u_xlat18.x);
-        u_xlat18.xy = u_xlat18.xy * float2(_FrameCount, _FrameCount);
-        u_xlat18.xy = u_xlat18.xy / float2(_FrameCount, _FrameCount);
-        u_xlat0.w = u_xlat0.x + u_xlat18.y;
-        u_xlat0.x = u_xlat0.x + u_xlat18.x;
-        u_xlat2.xy = (-u_xlat0.wx) + float2(1.0, 1.0);
-        u_xlat2.z = frac(_CurrentFrame);
-        u_xlat0.xyz = (bool(u_xlatb9)) ? u_xlat1.xyz : u_xlat2.xyz;
-        u_xlat1.x = dot(v.normal.xyz, v.normal.xyz);
-        u_xlat1.x = rsqrt(u_xlat1.x);
-        u_xlat1.xyz = u_xlat1.xxx * v.normal.xyz;
-        u_xlat28 = dot(v.tangent.xyz, v.tangent.xyz);
-        u_xlat28 = rsqrt(u_xlat28);
-        u_xlat2.xyz = u_xlat28 * v.tangent.xyz;
-        u_xlat16_3.xyz = u_xlat1.zxy * u_xlat2.yzx;
-        u_xlat16_3.xyz = u_xlat1.yzx * u_xlat2.zxy + (-u_xlat16_3.xyz);
-        u_xlat0.w = v.uv_1.x;
-        u_xlat4.xyz = _PosTex_A.SampleLevel(sampler_linear_repeat, u_xlat0.wx, 0).xyz;
-        u_xlat16_5.xyz = u_xlat4.xyz * float3(255.0, 255.0, 255.0);
-        u_xlatu4.xyz = uint3(u_xlat16_5.xyz);
-        u_xlatu4.xyz = (uint3)u_xlatu4.xyz << int3(8, 8, 8);
-        u_xlat4.xyz = uint3(u_xlatu4.xyz);
-        u_xlat4.xyz = u_xlat4.xyz * float3(1.52590219e-05, 1.52590219e-05, 1.52590219e-05);
-        u_xlat16_5.x = _BoundMinX;
-        u_xlat16_5.yz = float2(_BoundMinY, _BoundMinZ);
-        u_xlat16_6.xyz = (-u_xlat16_5.xyz) + float3(_BoundMaxX, _BoundMaxY, _BoundMaxZ);
-        u_xlat16_7.xyz = u_xlat4.xyz * u_xlat16_6.xyz + u_xlat16_5.xyz;
-
-        if(_IfInterframeInterp){
-            u_xlat0.xyw =  _PosTex_A.SampleLevel(sampler_linear_repeat, u_xlat0.wy,0).xyz;
-            u_xlat16_8.xyz = u_xlat0.xyw * float3(255.0, 255.0, 255.0);
-            u_xlatu0.xyw = uint3(u_xlat16_8.xyz);
-            u_xlatu0.xyw = (uint3)u_xlatu0.xyw << int3(8, 8, 8);
-            u_xlat0.xyw = uint3(u_xlatu0.xyw);
-            u_xlat0.xyw = u_xlat0.xyw * float3(1.52590219e-05, 1.52590219e-05, 1.52590219e-05);
-            u_xlat16_5.xyz = u_xlat0.xyw * u_xlat16_6.xyz + u_xlat16_5.xyz;
-            u_xlat0.xyw = (-u_xlat16_7.xyz) + u_xlat16_5.xyz;
-            u_xlat0.xyz = u_xlat0.xyw * u_xlat0.zzz + u_xlat16_7.xyz;
-        } else {
-            u_xlat0.xyz = u_xlat16_7.xyz;
-        }
-        u_xlat4.xyz = u_xlat16_3.xyz * u_xlat0.yyy;
-        u_xlat0.xyw = u_xlat0.xxx * u_xlat2.xyz + u_xlat4.xyz;
-        u_xlat0.xyz = u_xlat0.zzz * u_xlat1.xyz + u_xlat0.xyw;
-        u_xlat0.xyz = u_xlat0.xyz + v.vertex.xyz;
-        // u_xlat1 = u_xlat0.yyyy * unity_ObjectToWorld[1];
-        // u_xlat1 = unity_ObjectToWorld[0] * u_xlat0.xxxx + u_xlat1;
-        // u_xlat0 = unity_ObjectToWorld[2] * u_xlat0.zzzz + u_xlat1;
-        // u_xlat1 = u_xlat0 + unity_ObjectToWorld[3];
-        // u_xlat2 = u_xlat1.yyyy * unity_MatrixVP[1];
-        // u_xlat2 = unity_MatrixVP[0] * u_xlat1.xxxx + u_xlat2;
-        // u_xlat2 = unity_MatrixVP[2] * u_xlat1.zzzz + u_xlat2;
-        // u_xlat1 = unity_MatrixVP[3] * u_xlat1.wwww + u_xlat2;
-        o.pos = UnityObjectToClipPos(u_xlat0);
-        u_xlat2.x = dot(v.normal.xyz, unity_WorldToObject[0].xyz);
-        u_xlat2.y = dot(v.normal.xyz, unity_WorldToObject[1].xyz);
-        u_xlat2.z = dot(v.normal.xyz, unity_WorldToObject[2].xyz);
-        u_xlat27 = dot(u_xlat2.xyz, u_xlat2.xyz);
-        u_xlat27 = rsqrt(u_xlat27);
-        o.normal.xyz = u_xlat27 * u_xlat2.xyz;
-        u_xlat0.xyz = unity_ObjectToWorld[3].xyz * v.vertex.www + u_xlat0.xyz;
-        u_xlat2.xyz = (-u_xlat0.xyz) + _WorldSpaceCameraPos.xyz;
-        u_xlat27 = dot(u_xlat2.xyz, u_xlat2.xyz);
-        u_xlat27 = rsqrt(u_xlat27);
-        vs_TEXCOORD2.xyz = u_xlat27 * u_xlat2.xyz;
-        u_xlat2.xz = u_xlat1.xw * float2(0.5, 0.5);
-        u_xlat27 = u_xlat1.y * _ProjectionParams.x;
-        u_xlat2.w = u_xlat27 * 0.5;
-        vs_TEXCOORD4.xy = u_xlat2.zz + u_xlat2.xw;
-        // o.pos = u_xlat1;
-        o.v_col = v.v_col;
-        o.uv_a = v.uv_0.xyxy;
-        o.ss_pos = ComputeScreenPos(o.pos);
-        return o;
-    }
     #endif
 
     float4 pos_ws  = mul(unity_ObjectToWorld, v.vertex);
