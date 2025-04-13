@@ -34,97 +34,133 @@ float4 bloom_blur_h(Texture2D tex, SamplerState smp, float2 uv, float2 texelsize
     float4 vs_TEXCOORD1;
     float4 u_xlat0;
     float4 SV_Target0;
-    float4 u_xlat16_0;
-    float4 u_xlat10_0;
-    float4 u_xlat1;
-    float4 u_xlat16_1;
-    float4 u_xlat10_1;
-    float4 u_xlat10_2;
     
 
-    (vs_TEXCOORD0.xy = ((uv) + _UVTransformSource.zw));
-    (u_xlat0 = ((_UVTransformSource.xxyy * float4(0.0, 1.0, 0.0, 1.0)) + _UVTransformSource.zzww));
-    (vs_TEXCOORD1 = ((texelsize.xxyy * float4(1.0, -1.0, 1.0, -1.0)) + u_xlat0));
+    // Transform UV coordinates
+    vs_TEXCOORD0.xy = uv + _UVTransformSource.zw;
+    
+    // Calculate UV boundaries
+    float4 uvBoundaries = (_UVTransformSource.xxyy * float4(0.0, 1.0, 0.0, 1.0)) + _UVTransformSource.zzww;
+    vs_TEXCOORD1 = (texelsize.xxyy * float4(1.0, -1.0, 1.0, -1.0)) + uvBoundaries;
 
+    // For horizontal blur, we only need x component
     texelsize.y = 0.0f;
-    (u_xlat0 = ((texelsize.xyxy * float4(-6.1384072, -6.1384072, -4.2199531, -4.2199531)) + vs_TEXCOORD0.xyxy));
-    (u_xlat0 = max(u_xlat0, vs_TEXCOORD1.xzxz));
-    (u_xlat0 = min(u_xlat0, vs_TEXCOORD1.ywyw));
-    (u_xlat10_1 = sample_texture(smp, tex, u_xlat0.zw));
-    (u_xlat10_0 = sample_texture(smp, tex, u_xlat0.xy));
-    (u_xlat16_1 = (u_xlat10_1 * float4(0.028576409, 0.028576409, 0.028576409, 0.028576409)));
-    (u_xlat16_0 = ((u_xlat10_0 * float4(0.0015526291, 0.0015526291, 0.0015526291, 0.0015526291)) + u_xlat16_1));
-    (u_xlat1 = ((texelsize.xyxy * float4(-2.3310809, -2.3310809, -0.4648928, -0.4648928)) + vs_TEXCOORD0.xyxy));
-    (u_xlat1 = max(u_xlat1, vs_TEXCOORD1.xzxz));
-    (u_xlat1 = min(u_xlat1, vs_TEXCOORD1.ywyw));
-    (u_xlat10_2 = sample_texture(smp, tex, u_xlat1.xy));
-    (u_xlat10_1 = sample_texture(smp, tex, u_xlat1.zw));
-    (u_xlat16_0 = ((u_xlat10_2 * float4(0.1802229, 0.1802229, 0.1802229, 0.1802229)) + u_xlat16_0));
-    (u_xlat16_0 = ((u_xlat10_1 * float4(0.3954528, 0.3954528, 0.3954528, 0.3954528)) + u_xlat16_0));
-    (u_xlat1 = ((texelsize.xyxy * float4(1.3960429, 1.3960429, 3.271976, 3.271976)) + vs_TEXCOORD0.xyxy));
-    (u_xlat1 = max(u_xlat1, vs_TEXCOORD1.xzxz));
-    (u_xlat1 = min(u_xlat1, vs_TEXCOORD1.ywyw));
-    (u_xlat10_2 = sample_texture(smp, tex, u_xlat1.xy));
-    (u_xlat10_1 = sample_texture(smp, tex, u_xlat1.zw));
-    (u_xlat16_0 = ((u_xlat10_2 * float4(0.3043977, 0.3043977, 0.3043977, 0.3043977)) + u_xlat16_0));
-    (u_xlat16_0 = ((u_xlat10_1 * float4(0.081959292, 0.081959292, 0.081959292, 0.081959292)) + u_xlat16_0));
-    (u_xlat1 = ((texelsize.xyxy * float4(5.1754818, 5.1754818, 7.0, 7.0)) + vs_TEXCOORD0.xyxy));
-    (u_xlat1 = max(u_xlat1, vs_TEXCOORD1.xzxz));
-    (u_xlat1 = min(u_xlat1, vs_TEXCOORD1.ywyw));
-    (u_xlat10_2 = sample_texture(smp, tex, u_xlat1.xy));
-    (u_xlat10_1 = sample_texture(smp, tex, u_xlat1.zw));
-    (u_xlat16_0 = ((u_xlat10_2 * float4(0.0076231952, 0.0076231952, 0.0076231952, 0.0076231952)) + u_xlat16_0));
-    (SV_Target0 = ((u_xlat10_1 * float4(0.00021489531, 0.00021489531, 0.00021489531, 0.00021489531)) + u_xlat16_0));
+    
+    // Sample with Gaussian weights at different offsets
+    // First far negative offsets (-6.13, -4.22)
+    float4 farLeftUVs = (texelsize.xyxy * float4(-6.1384072, -6.1384072, -4.2199531, -4.2199531)) + vs_TEXCOORD0.xyxy;
+    farLeftUVs = max(farLeftUVs, vs_TEXCOORD1.xzxz); // Clamp to boundaries
+    farLeftUVs = min(farLeftUVs, vs_TEXCOORD1.ywyw);
+    
+    float4 sample1 = sample_texture(smp, tex, farLeftUVs.zw);
+    float4 sample0 = sample_texture(smp, tex, farLeftUVs.xy);
+    
+    // Apply weights for Gaussian blur
+    float4 weightedResult = sample1 * float4(0.028576409, 0.028576409, 0.028576409, 0.028576409);
+    weightedResult += sample0 * float4(0.0015526291, 0.0015526291, 0.0015526291, 0.0015526291);
+    
+    // Medium negative offsets (-2.33, -0.46)
+    float4 midLeftUVs = (texelsize.xyxy * float4(-2.3310809, -2.3310809, -0.4648928, -0.4648928)) + vs_TEXCOORD0.xyxy;
+    midLeftUVs = max(midLeftUVs, vs_TEXCOORD1.xzxz);
+    midLeftUVs = min(midLeftUVs, vs_TEXCOORD1.ywyw);
+    
+    float4 sample2 = sample_texture(smp, tex, midLeftUVs.xy);
+    float4 sample3 = sample_texture(smp, tex, midLeftUVs.zw);
+    
+    weightedResult += sample2 * float4(0.1802229, 0.1802229, 0.1802229, 0.1802229);
+    weightedResult += sample3 * float4(0.3954528, 0.3954528, 0.3954528, 0.3954528);
+    
+    // Positive offsets (1.39, 3.27)
+    float4 rightUVs = (texelsize.xyxy * float4(1.3960429, 1.3960429, 3.271976, 3.271976)) + vs_TEXCOORD0.xyxy;
+    rightUVs = max(rightUVs, vs_TEXCOORD1.xzxz);
+    rightUVs = min(rightUVs, vs_TEXCOORD1.ywyw);
+    
+    float4 sample4 = sample_texture(smp, tex, rightUVs.xy);
+    float4 sample5 = sample_texture(smp, tex, rightUVs.zw);
+    
+    weightedResult += sample4 * float4(0.3043977, 0.3043977, 0.3043977, 0.3043977);
+    weightedResult += sample5 * float4(0.081959292, 0.081959292, 0.081959292, 0.081959292);
+    
+    // Far positive offsets (5.17, 7.0)
+    float4 farRightUVs = (texelsize.xyxy * float4(5.1754818, 5.1754818, 7.0, 7.0)) + vs_TEXCOORD0.xyxy;
+    farRightUVs = max(farRightUVs, vs_TEXCOORD1.xzxz);
+    farRightUVs = min(farRightUVs, vs_TEXCOORD1.ywyw);
+    
+    float4 sample6 = sample_texture(smp, tex, farRightUVs.xy);
+    float4 sample7 = sample_texture(smp, tex, farRightUVs.zw);
+    
+    weightedResult += sample6 * float4(0.0076231952, 0.0076231952, 0.0076231952, 0.0076231952);
+    SV_Target0 = weightedResult + sample7 * float4(0.00021489531, 0.00021489531, 0.00021489531, 0.00021489531);
+    
     return SV_Target0;
 }
 
 float4 bloom_blur_v(Texture2D tex, SamplerState smp, float2 uv, float2 texelsize)
 {
-    float2 vs_TEXCOORD0;
-    float4 vs_TEXCOORD1;
-    float4 u_xlat0;
-    float4 SV_Target0;
-    float4 u_xlat16_0;
-    float4 u_xlat10_0;
-    float4 u_xlat1;
-    float4 u_xlat16_1;
-    float4 u_xlat10_1;
-    float4 u_xlat10_2;
+    // Define input/output variables with clear names
+    float2 texCoord;
+    float4 texBoundaries;
+    float4 tempSample;
+    float4 finalColor;
+    float4 weightedColor;
+    float4 sampleResult;
 
-    (vs_TEXCOORD0.xy = ((uv) + _UVTransformSource.zw));
-    (u_xlat0 = ((_UVTransformSource.xxyy * float4(0.0, 1.0, 0.0, 1.0)) + _UVTransformSource.zzww));
-    (vs_TEXCOORD1 = ((texelsize.xxyy * float4(1.0, -1.0, 1.0, -1.0)) + u_xlat0));
+    // Transform UV coordinates
+    texCoord.xy = uv + _UVTransformSource.zw;
+    
+    // Calculate texture boundaries
+    float4 boundaries = (_UVTransformSource.xxyy * float4(0.0, 1.0, 0.0, 1.0)) + _UVTransformSource.zzww;
+    texBoundaries = ((texelsize.xxyy * float4(1.0, -1.0, 1.0, -1.0)) + boundaries);
 
+    // Disable horizontal sampling by setting x component to 0
     texelsize.x = 0.0f;
-    (u_xlat0 = ((texelsize.xyxy * float4(-6.1384072, -6.1384072, -4.2199531, -4.2199531)) + vs_TEXCOORD0.xyxy));
-    (u_xlat0 = max(u_xlat0, vs_TEXCOORD1.xzxz));
-    (u_xlat0 = min(u_xlat0, vs_TEXCOORD1.ywyw));
-    (u_xlat10_1 = sample_texture(smp, tex, u_xlat0.zw));
-    (u_xlat10_0 = sample_texture(smp, tex, u_xlat0.xy));
-    (u_xlat16_1 = (u_xlat10_1 * float4(0.028576409, 0.028576409, 0.028576409, 0.028576409)));
-    (u_xlat16_0 = ((u_xlat10_0 * float4(0.0015526291, 0.0015526291, 0.0015526291, 0.0015526291)) + u_xlat16_1));
-    (u_xlat1 = ((texelsize.xyxy * float4(-2.3310809, -2.3310809, -0.4648928, -0.4648928)) + vs_TEXCOORD0.xyxy));
-    (u_xlat1 = max(u_xlat1, vs_TEXCOORD1.xzxz));
-    (u_xlat1 = min(u_xlat1, vs_TEXCOORD1.ywyw));
-    (u_xlat10_2 = sample_texture(smp, tex, u_xlat1.xy));
-    (u_xlat10_1 = sample_texture(smp, tex, u_xlat1.zw));
-    (u_xlat16_0 = ((u_xlat10_2 * float4(0.1802229, 0.1802229, 0.1802229, 0.1802229)) + u_xlat16_0));
-    (u_xlat16_0 = ((u_xlat10_1 * float4(0.3954528, 0.3954528, 0.3954528, 0.3954528)) + u_xlat16_0));
-    (u_xlat1 = ((texelsize.xyxy * float4(1.3960429, 1.3960429, 3.271976, 3.271976)) + vs_TEXCOORD0.xyxy));
-    (u_xlat1 = max(u_xlat1, vs_TEXCOORD1.xzxz));
-    (u_xlat1 = min(u_xlat1, vs_TEXCOORD1.ywyw));
-    (u_xlat10_2 = sample_texture(smp, tex, u_xlat1.xy));
-    (u_xlat10_1 = sample_texture(smp, tex, u_xlat1.zw));
-    (u_xlat16_0 = ((u_xlat10_2 * float4(0.3043977, 0.3043977, 0.3043977, 0.3043977)) + u_xlat16_0));
-    (u_xlat16_0 = ((u_xlat10_1 * float4(0.081959292, 0.081959292, 0.081959292, 0.081959292)) + u_xlat16_0));
-    (u_xlat1 = ((texelsize.xyxy * float4(5.1754818, 5.1754818, 7.0, 7.0)) + vs_TEXCOORD0.xyxy));
-    (u_xlat1 = max(u_xlat1, vs_TEXCOORD1.xzxz));
-    (u_xlat1 = min(u_xlat1, vs_TEXCOORD1.ywyw));
-    (u_xlat10_2 = sample_texture(smp, tex, u_xlat1.xy));
-    (u_xlat10_1 = sample_texture(smp, tex, u_xlat1.zw));
-    (u_xlat16_0 = ((u_xlat10_2 * float4(0.0076231952, 0.0076231952, 0.0076231952, 0.0076231952)) + u_xlat16_0));
-    (SV_Target0 = ((u_xlat10_1 * float4(0.00021489531, 0.00021489531, 0.00021489531, 0.00021489531)) + u_xlat16_0));
-     return SV_Target0;
+    
+    // Sample with far negative offsets (-6.13, -4.22)
+    float4 farNegativeUVs = ((texelsize.xyxy * float4(-6.1384072, -6.1384072, -4.2199531, -4.2199531)) + texCoord.xyxy);
+    farNegativeUVs = max(farNegativeUVs, texBoundaries.xzxz); // Clamp to boundaries
+    farNegativeUVs = min(farNegativeUVs, texBoundaries.ywyw);
+    
+    float4 sampleFarNeg2 = sample_texture(smp, tex, farNegativeUVs.zw);
+    float4 sampleFarNeg1 = sample_texture(smp, tex, farNegativeUVs.xy);
+    
+    // Apply Gaussian weights to samples
+    weightedColor = sampleFarNeg2 * float4(0.028576409, 0.028576409, 0.028576409, 0.028576409);
+    weightedColor += sampleFarNeg1 * float4(0.0015526291, 0.0015526291, 0.0015526291, 0.0015526291);
+    
+    // Sample with medium negative offsets (-2.33, -0.46)
+    float4 medNegativeUVs = ((texelsize.xyxy * float4(-2.3310809, -2.3310809, -0.4648928, -0.4648928)) + texCoord.xyxy);
+    medNegativeUVs = max(medNegativeUVs, texBoundaries.xzxz);
+    medNegativeUVs = min(medNegativeUVs, texBoundaries.ywyw);
+    
+    float4 sampleMedNeg1 = sample_texture(smp, tex, medNegativeUVs.xy);
+    float4 sampleMedNeg2 = sample_texture(smp, tex, medNegativeUVs.zw);
+    
+    weightedColor += sampleMedNeg1 * float4(0.1802229, 0.1802229, 0.1802229, 0.1802229);
+    weightedColor += sampleMedNeg2 * float4(0.3954528, 0.3954528, 0.3954528, 0.3954528);
+    
+    // Sample with positive offsets (1.39, 3.27)
+    float4 positiveUVs = ((texelsize.xyxy * float4(1.3960429, 1.3960429, 3.271976, 3.271976)) + texCoord.xyxy);
+    positiveUVs = max(positiveUVs, texBoundaries.xzxz);
+    positiveUVs = min(positiveUVs, texBoundaries.ywyw);
+    
+    float4 samplePos1 = sample_texture(smp, tex, positiveUVs.xy);
+    float4 samplePos2 = sample_texture(smp, tex, positiveUVs.zw);
+    
+    weightedColor += samplePos1 * float4(0.3043977, 0.3043977, 0.3043977, 0.3043977);
+    weightedColor += samplePos2 * float4(0.081959292, 0.081959292, 0.081959292, 0.081959292);
+    
+    // Sample with far positive offsets (5.17, 7.0)
+    float4 farPositiveUVs = ((texelsize.xyxy * float4(5.1754818, 5.1754818, 7.0, 7.0)) + texCoord.xyxy);
+    farPositiveUVs = max(farPositiveUVs, texBoundaries.xzxz);
+    farPositiveUVs = min(farPositiveUVs, texBoundaries.ywyw);
+    
+    float4 sampleFarPos1 = sample_texture(smp, tex, farPositiveUVs.xy);
+    float4 sampleFarPos2 = sample_texture(smp, tex, farPositiveUVs.zw);
+    
+    weightedColor += sampleFarPos1 * float4(0.0076231952, 0.0076231952, 0.0076231952, 0.0076231952);
+    finalColor = weightedColor + sampleFarPos2 * float4(0.00021489531, 0.00021489531, 0.00021489531, 0.00021489531);
+    
+    return finalColor;
 }
 
 float4 bloom_blur_a(Texture2D tex, SamplerState smp, float2 uv, float2 texelsize, float2 scaler)

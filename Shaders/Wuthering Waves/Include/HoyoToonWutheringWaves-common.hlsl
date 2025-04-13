@@ -601,12 +601,11 @@ float3 matcap_coloring(float3 diffuse, float4 matcap, float spec)
 {
    return lerp(diffuse.xyz, diffuse.xyz * matcap.xyz, matcap.w * (spec.x >= 0.5));
 }
+
 //--------------------------------------------------------------------------------------
 // material funtions 
 void material_basic(inout float3 color, inout float4 shadow, inout float3 specular, in float3 normal, in float3 light, in float3 half_vector, in float3 spec, in float2 uv, in float shadow_mask, in float3 skin_id, in float3 typemask, inout float shadow_area, inout float4 matcap)
 {
-
-
     float metal_check = (0.00000003 >= spec.z); 
     metal_check = (metal_check) ? 0 : pow(spec.z, 0.1f);
     metal_check = ((1 + -metal_check) * 19.899f + 0.1f) * -999 + 1000;
