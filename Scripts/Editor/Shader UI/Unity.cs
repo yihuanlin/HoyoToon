@@ -9,6 +9,7 @@ using System.Reflection;
 using System.Text.RegularExpressions;
 using UnityEditor;
 using UnityEngine;
+using UnityEditor.Build;
 
 namespace HoyoToon
 {
@@ -36,19 +37,19 @@ namespace HoyoToon
         {
             try
             {
-                string symbols = PlayerSettings.GetScriptingDefineSymbolsForGroup(
-                        BuildTargetGroup.Standalone);
+                // FIX: Replaced obsolete GetScriptingDefineSymbolsForGroup with GetScriptingDefineSymbols
+                string symbols = PlayerSettings.GetScriptingDefineSymbols(NamedBuildTarget.Standalone);
                 if (!symbols.Contains(symbol) && active)
                 {
-                    PlayerSettings.SetScriptingDefineSymbolsForGroup(
-                                  BuildTargetGroup.Standalone, symbols + ";" + symbol);
+                    // FIX: Replaced obsolete SetScriptingDefineSymbolsForGroup with SetScriptingDefineSymbols
+                    PlayerSettings.SetScriptingDefineSymbols(NamedBuildTarget.Standalone, symbols + ";" + symbol);
                     if (refresh_if_changed)
                         AssetDatabase.Refresh();
                 }
                 else if (symbols.Contains(symbol) && !active)
                 {
-                    PlayerSettings.SetScriptingDefineSymbolsForGroup(
-                                  BuildTargetGroup.Standalone, Regex.Replace(symbols, @";?" + @symbol, ""));
+                    // FIX: Replaced obsolete SetScriptingDefineSymbolsForGroup with SetScriptingDefineSymbols
+                    PlayerSettings.SetScriptingDefineSymbols(NamedBuildTarget.Standalone, Regex.Replace(symbols, @";?" + @symbol, ""));
                     if (refresh_if_changed)
                         AssetDatabase.Refresh();
                 }
@@ -246,9 +247,11 @@ namespace HoyoToon
 
         public static void CheckAPICompatibility()
         {
-            ApiCompatibilityLevel level = PlayerSettings.GetApiCompatibilityLevel(BuildTargetGroup.Standalone);
+            // FIX: Replaced obsolete GetApiCompatibilityLevel with GetApiCompatibilityLevel(NamedBuildTarget)
+            ApiCompatibilityLevel level = PlayerSettings.GetApiCompatibilityLevel(NamedBuildTarget.Standalone);
             if (level == ApiCompatibilityLevel.NET_2_0_Subset)
-                PlayerSettings.SetApiCompatibilityLevel(BuildTargetGroup.Standalone, ApiCompatibilityLevel.NET_2_0);
+                // FIX: Replaced obsolete SetApiCompatibilityLevel with SetApiCompatibilityLevel(NamedBuildTarget, ApiCompatibilityLevel)
+                PlayerSettings.SetApiCompatibilityLevel(NamedBuildTarget.Standalone, ApiCompatibilityLevel.NET_2_0);
         }
 
         public static void CheckDrawingDll()

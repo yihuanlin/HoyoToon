@@ -1,7 +1,7 @@
 #if UNITY_EDITOR
 using UnityEditor;
 using UnityEngine;
-
+using UnityEditor.Build; // Required for NamedBuildTarget
 namespace HoyoToon
 {
     public class HoyoToonSceneManager
@@ -49,8 +49,8 @@ namespace HoyoToon
         private static void AddPostProcessing()
         {
             Camera mainCamera = Camera.main;
-            Camera[] cameras = UnityEngine.Object.FindObjectsOfType<Camera>();
-
+            // FIX: Replaced obsolete FindObjectsOfType with FindObjectsByType
+            Camera[] cameras = UnityEngine.Object.FindObjectsByType<Camera>(FindObjectsSortMode.None);
             if (mainCamera != null)
             {
                 AttachPostProcessing(mainCamera);

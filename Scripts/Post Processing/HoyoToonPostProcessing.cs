@@ -310,18 +310,14 @@ namespace HoyoToon
         private void SetupLayerBuffer()
         {
             if (_camera == null || _layerBuffer == null) return;
-
             UpdateRenderTexture(_camera);
-
             _layerBuffer.SetRenderTarget(targetTexture);
             _layerBuffer.ClearRenderTarget(true, true, Color.red);
-
             _layerBuffer.SetGlobalFloat("_LayerIndex", 1.0f);
             _layerBuffer.SetViewProjectionMatrices(_camera.worldToCameraMatrix, _camera.projectionMatrix);
-
-            Renderer[] allRenderers = FindObjectsOfType<Renderer>(false);
+            // FIX: Replaced obsolete FindObjectsOfType with FindObjectsByType
+            Renderer[] allRenderers = FindObjectsByType<Renderer>(FindObjectsSortMode.None);
             System.Array.Reverse(allRenderers);
-
             foreach (Renderer renderer in allRenderers)
             {
                 if ((Layer.value & (1 << renderer.gameObject.layer)) != 0)
@@ -348,7 +344,6 @@ namespace HoyoToon
                     }
                 }
             }
-
             // Add command buffer to camera
             _camera.AddCommandBuffer(CameraEvent.BeforeImageEffects, _layerBuffer);
         }
@@ -482,12 +477,12 @@ namespace HoyoToon
         {
             EditorApplication.update += UpdateAllPostProcesses;
         }
-
         static void UpdateAllPostProcesses()
         {
             if (!Application.isPlaying)
             {
-                HoyoToonPostProcessing[] postProcesses = FindObjectsOfType<HoyoToonPostProcessing>();
+                // FIX: Replaced obsolete FindObjectsOfType with FindObjectsByType
+                HoyoToonPostProcessing[] postProcesses = FindObjectsByType<HoyoToonPostProcessing>(FindObjectsSortMode.None);
                 foreach (var postProcess in postProcesses)
                 {
                     postProcess.RecreateCommandBuffers();

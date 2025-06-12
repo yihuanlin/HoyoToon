@@ -3,7 +3,6 @@ using UnityEditor;
 using UnityEngine;
 using System;
 using System.IO;
-
 namespace HoyoToon
 {
     public class ScreenshotEditorWindow : EditorWindow
@@ -162,7 +161,8 @@ namespace HoyoToon
             }
             else if (selectedView == ViewType.GameView)
             {
-                Camera gameCamera = UnityEngine.Object.FindObjectOfType<Camera>();
+                // FIX: Replaced obsolete FindObjectOfType with FindAnyObjectByType
+                Camera gameCamera = UnityEngine.Object.FindAnyObjectByType<Camera>();
                 if (gameCamera != null)
                 {
                     gameCamera.targetTexture = renderTexture;
@@ -244,7 +244,8 @@ namespace HoyoToon
             }
             else if (selectedView == ViewType.GameView)
             {
-                camera = Camera.main ?? UnityEngine.Object.FindObjectOfType<Camera>();
+                // FIX: Replaced obsolete FindObjectOfType with FindAnyObjectByType
+                camera = Camera.main ?? UnityEngine.Object.FindAnyObjectByType<Camera>();
                 if (camera == null)
                 {
                     HoyoToonLogs.ErrorDebug("No camera found in the scene.");
